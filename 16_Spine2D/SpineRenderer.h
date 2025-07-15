@@ -98,6 +98,7 @@ public:
         int index = -1; // 자신의 인덱스
         std::string name;
         int parentIndex = -1; // 부모 인덱스(-1이면 root)
+		std::string parentName; // 부모 이름
         float x = 0, y = 0;
         float rotation = 0;
         float scaleX = 1, scaleY = 1;

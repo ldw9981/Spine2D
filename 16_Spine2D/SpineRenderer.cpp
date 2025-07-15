@@ -583,13 +583,14 @@ bool SpineRenderer::LoadSpineSkeleton(const std::string& jsonPath) {
     json j; file >> j;
     // 본 파싱
     m_bones.clear();
-    std::vector<std::string> boneNames;
+
+	std::unordered_map<std::string, int> boneNameToIndex;
     int boneIdx = 0;
     for (const auto& b : j["bones"]) {
         SpineBone bone;
         bone.index = boneIdx;
         bone.name = b["name"].get<std::string>();
-        boneNames.push_back(bone.name);
+        boneNameToIndex[bone.name] = boneIdx; // 이름과 인덱스 매핑
         if (b.contains("x")) bone.x = b["x"].get<float>();
         if (b.contains("y")) bone.y = b["y"].get<float>();
         if (b.contains("rotation")) bone.rotation = b["rotation"].get<float>();
@@ -597,21 +598,17 @@ bool SpineRenderer::LoadSpineSkeleton(const std::string& jsonPath) {
         if (b.contains("scaleY")) bone.scaleY = b["scaleY"].get<float>();
         if (b.contains("length")) bone.length = b["length"].get<float>();
         if (b.contains("color")) bone.color = b["color"].get<std::string>();
-        bone.parentIndex = -1; // 임시, 아래에서 설정
-        m_bones.push_back(bone);
-        ++boneIdx;
-    }
-    // parentIndex 설정
-    for (size_t i = 0; i < j["bones"].size(); ++i) {
-        const auto& b = j["bones"][i];
         if (b.contains("parent")) {
-            std::string parentName = b["parent"].get<std::string>();
-            auto it = std::find(boneNames.begin(), boneNames.end(), parentName);
-            if (it != boneNames.end()) {
-                m_bones[i].parentIndex = static_cast<int>(std::distance(boneNames.begin(), it));
+            bone.parentName = b["parent"].get<std::string>();
+            auto it = boneNameToIndex.find(bone.parentName);
+            if (it != boneNameToIndex.end()) {
+                bone.parentIndex = it->second; // 부모 인덱스 설정
             }
-        }
-    }
+        }       
+        m_bones.push_back(bone);		
+        ++boneIdx;
+    }	
+
     // 슬롯 파싱
     m_slots.clear();
     for (const auto& s : j["slots"]) {
