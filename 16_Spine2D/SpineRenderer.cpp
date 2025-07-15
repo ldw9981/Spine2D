@@ -12,6 +12,7 @@
 
 #include <windows.h>
 #include <wrl.h>  // ComPtr 사용을 위한 헤더
+#include <unordered_set>
 
 // 콘솔 인코딩을 UTF-8로 설정
 void SetConsoleUTF8() {
@@ -872,6 +873,16 @@ float SpineRenderer::InterpolateKeyFrames(const std::vector<KeyFrame>& keyframes
 // --- 슬롯별 이미지 렌더링 ---
 void SpineRenderer::RenderSpineSkeleton() 
 { 
+    m_renderTarget->SetTransform(D2D1::Matrix3x2F::Identity());
+	std::wstring wAnimName(m_currentAnimation.begin(), m_currentAnimation.end());
+	m_renderTarget->DrawTextW(
+        wAnimName.c_str(), (UINT32)wAnimName.length(),
+		m_textFormat.Get(),
+		D2D1::RectF(0,0,100, 10),
+		m_brush.Get()
+	);
+
+    D2D1::Matrix3x2F renderMatrix = D2D1::Matrix3x2F::Scale(1.0f, -1.0f);
     // 애니메이션 적용: 각 본의 로컬 트랜스폼 계산
     std::vector<D2D1::Matrix3x2F> local(m_bones.size());
     const Animation* anim = nullptr;
@@ -966,8 +977,7 @@ void SpineRenderer::RenderSpineSkeleton()
         const D2D1::Matrix3x2F& boneMatrix = world[boneIndex];
         
         float rotate = region.rotate ? 90.0f : 0.0f;
-        D2D1::Matrix3x2F renderMatrix = D2D1::Matrix3x2F::Scale(1.0f, -1.0f) *
-            D2D1::Matrix3x2F::Rotation(rotate);
+       
 
         // 이미지 변환 행렬 계산 (attachment 변환을 본 변환에 적용)
         D2D1::Matrix3x2F attachmentMatrix =
@@ -995,37 +1005,10 @@ void SpineRenderer::RenderSpineSkeleton()
             0,0,
             destWidth,destHeight
         );
-        
-        std::cout << "destRect: (" << destRect.left << ", " << destRect.top << ", " << destRect.right << ", " << destRect.bottom << ")" << std::endl;
-        
         if (m_spineBitmap) {
             // 1. 슬롯 이미지 렌더링
             m_renderTarget->DrawBitmap(m_spineBitmap.Get(), destRect, 1.0f, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, srcRect);
-            renderedSlots++;
-            std::cout << "Image rendering completed: " << regionName << std::endl;
-            
-            // 1-1. 슬롯 이름 텍스트 출력
-            if (m_dwriteFactory && m_textFormat) {
-                std::wstring wSlotName(slot.name.begin(), slot.name.end());
-                D2D1_POINT_2F textPos = { 0,0 };
-                m_brush->SetColor(D2D1::ColorF(D2D1::ColorF::White, 1.0f));
-                m_renderTarget->DrawTextW(
-                    wSlotName.c_str(), (UINT32)wSlotName.length(),
-                    m_textFormat.Get(),
-                    D2D1::RectF(textPos.x, textPos.y, textPos.x + 100, textPos.y + 20),
-                    m_brush.Get()
-                );
-            }
-
-			D2D1::Matrix3x2F finalMatrix = renderMatrix * boneMatrix * m_UnityScreen;
-			m_renderTarget->SetTransform(finalMatrix);
-            // 2. 이미지 위치에 반투명 빨간색 박스 그리기
-            m_brush->SetColor(D2D1::ColorF(D2D1::ColorF::Red, 0.2f));
-            m_renderTarget->FillRectangle(destRect, m_brush.Get());
-            m_brush->SetColor(D2D1::ColorF(D2D1::ColorF::Blue, 1.0f));
-            destRect = { 0,0,10,10 };
-            m_renderTarget->FillRectangle(destRect, m_brush.Get());
-            
+            renderedSlots++;            
         } else {
             std::cout << "Spine bitmap is null!" << std::endl;
         }
@@ -1035,6 +1018,46 @@ void SpineRenderer::RenderSpineSkeleton()
     m_renderTarget->SetTransform(D2D1::Matrix3x2F::Identity());
     std::cout << "Rendered slots count: " << renderedSlots << std::endl;
     std::cout << "RenderSpineSkeleton completed" << std::endl;
+
+
+
+    std::unordered_set<std::string> printBone;
+	printBone.insert("root");
+    printBone.insert("hip");
+
+	for (size_t i = 0; i < m_bones.size(); ++i) 
+    {	
+        std::string boneName = m_bones[i].name;
+
+		if (printBone.find(boneName) == printBone.end())
+            continue;
+        
+        D2D1::Matrix3x2F boneMatrix = world[i];
+
+		D2D1::Matrix3x2F finalMatrix = renderMatrix * boneMatrix * m_UnityScreen;
+		m_renderTarget->SetTransform(finalMatrix);
+		
+        D2D1_RECT_F destRect;
+        destRect = { -5,-1,5,1 }; 
+        m_brush->SetColor(D2D1::ColorF(D2D1::ColorF::Green, 1.0f));
+        m_renderTarget->FillRectangle(destRect, m_brush.Get());
+        destRect = { -1,-5,1,5 };
+        m_brush->SetColor(D2D1::ColorF(D2D1::ColorF::Red, 1.0f));
+		m_renderTarget->FillRectangle(destRect, m_brush.Get());
+		D2D1_POINT_2F textPos = { 0,0 };
+		m_brush->SetColor(D2D1::ColorF(D2D1::ColorF::Blue, 1.0f));
+
+
+		
+        std::wstring wBoneName(boneName.begin(), boneName.end());
+		m_renderTarget->DrawTextW(
+            wBoneName.c_str(), (UINT32)wBoneName.length(),
+			m_textFormat.Get(),
+			D2D1::RectF(textPos.x, textPos.y, textPos.x + 100, textPos.y + 10),
+			m_brush.Get()
+		);
+	}
+
 }
 
 // --- 애니메이션 시간 업데이트 ---
