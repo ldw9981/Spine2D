@@ -64,7 +64,7 @@ bool SpineRenderer::Initialize(HWND hwnd,int width,int height) {
     m_hwnd = hwnd;
     
 	m_UnityScreen = D2D1::Matrix3x2F::Scale(1.0f, -1.0f) *
-		D2D1::Matrix3x2F::Translation(width / 2, height );
+		D2D1::Matrix3x2F::Translation(width / 2, height/2 );
 
     // 콘솔 인코딩 설정
     SetConsoleUTF8();
@@ -924,54 +924,33 @@ void SpineRenderer::RenderSpineSkeleton()
     // 슬롯별로 이미지 렌더링
     int renderedSlots = 0;
     size_t size = m_slots.size();
-    for (size_t i = 0; i < size; ++i) {
+    for (size_t i = 0; i < size; ++i) 
+    {
         const auto& slot = m_slots[i];
-        std::cout << "Processing slot: " << slot.name << std::endl;
-        
-        // 스킨에서 attachment 찾기
         const SpineSkin* skin = nullptr;
         for (const auto& s : m_skins) if (s.name == m_currentSkin) skin = &s;
-        if (!skin) {
-            std::cout << "Skin not found: " << m_currentSkin << std::endl;
+        if (!skin) 
             continue;
-        }
         
         auto itAttMap = skin->attachments.find(slot.name);
-        if (itAttMap == skin->attachments.end()) {
-            std::cout << "Slot attachment not found: " << slot.name << std::endl;
-            continue;
-        }
+        if (itAttMap == skin->attachments.end()) 
+            continue;       
         
         std::string attName = slot.attachment;
         if (attName.empty() && !itAttMap->second.empty()) attName = itAttMap->second.begin()->first;
         auto itAtt = itAttMap->second.find(attName);
-        if (itAtt == itAttMap->second.end()) {
-            std::cout << "Attachment not found: " << attName << std::endl;
+        if (itAtt == itAttMap->second.end()) 
             continue;
-        }
         
         const SpineAttachment& att = itAtt->second;
-        std::cout << "Attachment found: " << att.name << ", type: " << att.type << std::endl;
         
         // atlas에서 region 찾기
         std::string regionName = att.path.empty() ? att.name : att.path;
-        std::cout << "Looking for atlas region: " << regionName << std::endl;
-        std::cout << "Available regions: ";
-        for (const auto& pair : m_atlasRegions) {
-            std::cout << pair.first << " ";
-        }
-        std::cout << std::endl;
-        
         auto itRegion = m_atlasRegions.find(regionName);
-        if (itRegion == m_atlasRegions.end()) {
-            std::cout << "Atlas region not found: " << regionName << std::endl;
-            continue;
-        }
-        
-        const AtlasRegion& region = itRegion->second;
-        std::cout << "Atlas region found: " << region.name << " at (" << region.x << "," << region.y << "," << region.width << "," << region.height << ")" << std::endl;
-        std::cout << "  offsets: (" << region.offset_x << "," << region.offset_y << "," << region.orig_w << "," << region.orig_h << ")" << std::endl;
-        
+        if (itRegion == m_atlasRegions.end()) 
+			continue;
+
+		const AtlasRegion& region = itRegion->second;		
         // 본 트랜스폼
         int boneIndex = -1;
         for (size_t i = 0; i < m_bones.size(); ++i) {
@@ -1037,6 +1016,9 @@ void SpineRenderer::RenderSpineSkeleton()
                     m_brush.Get()
                 );
             }
+
+			D2D1::Matrix3x2F finalMatrix = renderMatrix * boneMatrix * m_UnityScreen;
+			m_renderTarget->SetTransform(finalMatrix);
             // 2. 이미지 위치에 반투명 빨간색 박스 그리기
             m_brush->SetColor(D2D1::ColorF(D2D1::ColorF::Red, 0.2f));
             m_renderTarget->FillRectangle(destRect, m_brush.Get());
