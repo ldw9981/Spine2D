@@ -1,24 +1,8 @@
+#include "Common.h"
+
+#include "Float2.h"
 #include "SpineRenderer.h"
-#include <d3d11.h>
-#include <dxgi.h>
-#include <d2d1_1.h>
-#include <d2d1_1helper.h>
-#include <dwrite.h>
-#include <wincodec.h>
-#include <wincodecsdk.h>
-#include <iostream>
-#include <cmath>  // sin 함수 사용을 위한 헤더
-#include <cfloat> // FLT_MAX 사용을 위한 헤더
-
-#include <windows.h>
-#include <wrl.h>  // ComPtr 사용을 위한 헤더
-#include <unordered_set>
-
-// 콘솔 인코딩을 UTF-8로 설정
-void SetConsoleUTF8() {
-    SetConsoleOutputCP(CP_UTF8);
-    SetConsoleCP(CP_UTF8);
-}
+#include "json.hpp" // nlohmann::json 사용
 
 #pragma comment(lib, "d3d11.lib")
 
@@ -30,27 +14,14 @@ void SetConsoleUTF8() {
 
 #pragma comment(lib,"dwrite.lib")
 
-using namespace Microsoft::WRL;
 
-#include "json.hpp"
-#include <fstream>
-#include <sstream>
-
-// --- 본 트랜스폼 계산에 필요한 함수 선언을 최상단으로 이동 ---
-void ComputeBoneWorldMatrix(const std::vector<SpineRenderer::SpineBone>& bones, int boneIndex, 
-                           const std::vector<D2D1::Matrix3x2F>& local, D2D1::Matrix3x2F& out) {
-    if (boneIndex < 0 || boneIndex >= (int)bones.size()) {
-        out = D2D1::Matrix3x2F::Identity();
-        return;
-    }
-    out = local[boneIndex];
-    int parentIdx = bones[boneIndex].parentIndex;
-    if (parentIdx != -1) {
-        D2D1::Matrix3x2F parent;
-        ComputeBoneWorldMatrix(bones, parentIdx, local, parent);
-        out = out * parent;
-    }
+// 콘솔 인코딩을 UTF-8로 설정
+void SetConsoleUTF8() {
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
 }
+
+
 
 
 SpineRenderer::SpineRenderer() 
@@ -912,33 +883,35 @@ float SpineRenderer::InterpolateKeyFrames(const std::vector<KeyFrameFloat>& keyf
     return keyframes.back().value;
 }
 
-std::pair<float,float> SpineRenderer::InterpolateKeyFrames(const std::vector<KeyFrameFloat2>& keyframes, float time)
+Float2 SpineRenderer::InterpolateKeyFrames(const std::vector<KeyFrameFloat2>& keyframes, float time)
 {
-	if (keyframes.empty()) return std::pair<float,float>(0.0f,0.0f);
+	if (keyframes.empty()) 
+        return Float2(0.0f, 0.0f);
 
 	// 정적 포즈 처리: 시간이 없는 키프레임이면 첫 번째 값 반환
 	if (keyframes.size() == 1 || keyframes.front().time == 0.0f && keyframes.size() == 1) {
-		return std::pair<float, float>(keyframes.front().x, keyframes.front().y);
+		return Float2(keyframes.front().x, keyframes.front().y);
 	}
 
 	// 애니메이션 키프레임 처리
-	if (time <= keyframes.front().time) return std::pair<float, float>(keyframes.front().x, keyframes.front().y);
-	if (time >= keyframes.back().time) return std::pair<float, float>(keyframes.back().x, keyframes.back().y);
+	if (time <= keyframes.front().time) 
+        return Float2(keyframes.front().x, keyframes.front().y);
+	
+    if (time >= keyframes.back().time) 
+        return Float2(keyframes.back().x, keyframes.back().y);
 
 	for (size_t i = 1; i < keyframes.size(); ++i) {
 		if (time < keyframes[i].time) {
 			const KeyFrameFloat2& prev = keyframes[i - 1];
 			const KeyFrameFloat2& next = keyframes[i];
-			float t = (time - prev.time) / (next.time - prev.time);
 
-            std::pair<float, float> temp;
-            temp.first = prev.x + (next.x - prev.x) * t;
-            temp.second = prev.y + (next.y - prev.y) * t;
-            return temp;
+			float t = (time - prev.time) / (next.time - prev.time);
+			return Float2(prev.x + (next.x - prev.x) * t , prev.y + (next.y - prev.y) * t);
 		}
 	}
-	return std::pair<float, float>(keyframes.back().x, keyframes.back().y);
+	return Float2(keyframes.back().x, keyframes.back().y);
 }
+
 
 // --- 슬롯별 이미지 렌더링 ---
 void SpineRenderer::RenderSpineSkeleton() 
@@ -968,8 +941,8 @@ void SpineRenderer::RenderSpineSkeleton()
     for (size_t i = 0; i < m_bones.size(); ++i) {
         const auto& bone = m_bones[i];
         float rot = bone.rotation;
-        std::pair<float, float> scale = { bone.scaleX,bone.scaleY } ;
-        std::pair<float, float> translate = { bone.x,bone.y};
+        Float2 scale = { bone.scaleX,bone.scaleY } ;
+        Float2 translate = { bone.x,bone.y};
         if (anim) {
             auto itT = anim->boneTimelines.find(bone.name);
             if (itT != anim->boneTimelines.end()) {
@@ -981,23 +954,23 @@ void SpineRenderer::RenderSpineSkeleton()
                    
                 if (!itT->second.scale.empty())
                 {
-                    std::pair<float, float> addScale = InterpolateKeyFrames(itT->second.scale, m_currentAnimationTime);
-					scale.first *= addScale.first;
-					scale.second *= addScale.second;
+                    Float2 addScale = InterpolateKeyFrames(itT->second.scale, m_currentAnimationTime);
+					scale.x += addScale.x;
+					scale.y += addScale.y;
                 }
                    
                 if (!itT->second.translate.empty())
                 {
-                    std::pair<float, float> addTranslate = InterpolateKeyFrames(itT->second.translate, m_currentAnimationTime);
-                    translate.first += addTranslate.first;
-					translate.second += addTranslate.second;
+                    Float2 addTranslate = InterpolateKeyFrames(itT->second.translate, m_currentAnimationTime);
+                    translate.x += addTranslate.x;
+					translate.y += addTranslate.y;
                 }
             }
         }
         D2D1::Matrix3x2F localMatrix = 
-            D2D1::Matrix3x2F::Scale(scale.first, scale.second) *
+            D2D1::Matrix3x2F::Scale(scale.x, scale.y) *
             D2D1::Matrix3x2F::Rotation(rot) *
-            D2D1::Matrix3x2F::Translation(translate.first, translate.second);
+            D2D1::Matrix3x2F::Translation(translate.x, translate.y);
         local[i] = localMatrix;
     }
     

@@ -1,21 +1,6 @@
 #pragma once
 
-#include <d2d1.h>
-#include <d2d1_1.h>
-#include <d3d11.h>
-#include <dxgi.h>
-#include <wrl/client.h>
-#include <memory>
-#include <string>
-#include <vector>
-#include <map>
-#include "json.hpp" // nlohmann::json 사용
-#include <dwrite.h>
-
-// Spine2D 관련 헤더들 (실제 Spine 라이브러리가 있다면)
-// #include <spine/spine.h>
-
-using Microsoft::WRL::ComPtr;
+#include "Float2.h"
 
 // 본 구조체
 struct Bone {
@@ -222,8 +207,7 @@ public:
     
     // 키프레임 보간
     float InterpolateKeyFrames(const std::vector<KeyFrameFloat>& keyframes, float time);
-    std::pair<float,float> InterpolateKeyFrames(const std::vector<KeyFrameFloat2>& keyframes, float time);
-   
+    Float2 InterpolateKeyFrames(const std::vector<KeyFrameFloat2>& keyframes, float time);
     
     // 베지어 곡선 보간
     float BezierInterpolate(float t, float p0, float p1, float p2, float p3);

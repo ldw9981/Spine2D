@@ -1,34 +1,7 @@
-#include <windows.h>
-#include <d2d1.h>
-#include <d2d1_1.h>
-#include <d3d11.h>
-#include <dxgi.h>
-#include <wrl/client.h>
-#include <iostream>
-#include <chrono>
-#include <thread>
+#include "Common.h"
 
 #include "SpineRenderer.h"
 #include "SpineAnimation.h"
-
-using Microsoft::WRL::ComPtr;
-
-#include <windows.h>
-#include <wrl.h>  // ComPtr 사용을 위한 헤더
-
-#include <d3d11.h>
-#pragma comment(lib, "d3d11.lib")
-
-#include <d2d1_3.h> //ID2D1Factory8,ID2D1DeviceContext7
-#pragma comment(lib, "d2d1.lib")
-
-#include <dxgi1_6.h> // IDXGIFactory7
-#pragma comment(lib, "dxgi.lib")
-
-#include <dwrite.h>
-#pragma comment(lib,"dwrite.lib")
-
-using namespace Microsoft::WRL;
 
 // 전역 변수
 SpineRenderer g_spineRenderer;
