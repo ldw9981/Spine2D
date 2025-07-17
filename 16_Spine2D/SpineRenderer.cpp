@@ -820,9 +820,7 @@ bool SpineRenderer::LoadAtlas(const std::string& atlasPath)
 			std::cout << "Saved region: " << regionName << " at (" << region.x << "," << region.y << "," << region.width << "," << region.height << ")" << std::endl;
 		}
     }
-    
 
-    
     std::cout << "Total regions loaded: " << m_atlasRegions.size() << std::endl;
     return true;
 }
@@ -925,7 +923,7 @@ void SpineRenderer::RenderSpineSkeleton()
 		m_brush.Get()
 	);
 
-    D2D1::Matrix3x2F renderMatrix = D2D1::Matrix3x2F::Scale(1.0f, -1.0f);
+    
     // 애니메이션 적용: 각 본의 로컬 트랜스폼 계산
     std::vector<D2D1::Matrix3x2F> local(m_bones.size());
     const Animation* anim = nullptr;
@@ -955,8 +953,8 @@ void SpineRenderer::RenderSpineSkeleton()
                 if (!itT->second.scale.empty())
                 {
                     Float2 addScale = InterpolateKeyFrames(itT->second.scale, m_currentAnimationTime);
-					scale.x += addScale.x;
-					scale.y += addScale.y;
+					scale.x *= addScale.x;
+					scale.y *= addScale.y;
                 }
                    
                 if (!itT->second.translate.empty())
@@ -1019,7 +1017,7 @@ void SpineRenderer::RenderSpineSkeleton()
         if (itRegion == m_atlasRegions.end()) 
 			continue;
 
-		const AtlasRegion& region = itRegion->second;		
+        const AtlasRegion& region = itRegion->second;
         // 본 트랜스폼
         int boneIndex = -1;
         for (size_t i = 0; i < m_bones.size(); ++i) {
@@ -1034,38 +1032,45 @@ void SpineRenderer::RenderSpineSkeleton()
         
         const D2D1::Matrix3x2F& boneMatrix = world[boneIndex];
         
-        float rotate = region.rotate ? 90.0f : 0.0f;
-       
+        float rotate = region.rotate ? -90.0f : 0.0f;
+        D2D1::Matrix3x2F renderMatrix = D2D1::Matrix3x2F::Scale(1.0f, -1.0f) * D2D1::Matrix3x2F::Rotation(rotate);
 
         // 이미지 변환 행렬 계산 (attachment 변환을 본 변환에 적용)
         D2D1::Matrix3x2F attachmentMatrix =
             D2D1::Matrix3x2F::Scale(att.scaleX,att.scaleY) * D2D1::Matrix3x2F::Rotation(att.rotation) *
-            D2D1::Matrix3x2F::Translation(att.x, att.y);
+            D2D1::Matrix3x2F::Translation(att.x,att.y);
                     
         D2D1::Matrix3x2F finalMatrix = renderMatrix * attachmentMatrix * boneMatrix * m_UnityScreen;
         m_renderTarget->SetTransform(finalMatrix);
-        
+
         // atlas에서 해당 영역만 잘라서 렌더링
-        D2D1_RECT_F srcRect = D2D1::RectF(
-            (FLOAT)region.x, (FLOAT)region.y,
-            (FLOAT)(region.x + region.width), (FLOAT)(region.y + region.height)
-        );
-        std::cout << "srcRect: (" << srcRect.left << ", " << srcRect.top << ", " << srcRect.right << ", " << srcRect.bottom << ")" << std::endl;
+        D2D1_RECT_F srcRect;
+        srcRect.left = (float)region.x;
+		srcRect.top = (float)region.y;
+		srcRect.right = srcRect.left + (float)(region.rotate ? region.height : region.width);
+        srcRect.bottom = srcRect.top + (float)(region.rotate ? region.width : region.height);
+           
         // offsets 정보를 사용해서 destRect 계산
         float destWidth = (region.orig_w > 0) ? region.orig_w : att.width;
         float destHeight = (region.orig_h > 0) ? region.orig_h : att.height;
         
         // attachment 위치와 offsets를 사용해서 이미지 위치 조정
-        float offsetX = att.x + region.offset_x;
-        float offsetY = att.y + region.offset_x;
+        float offsetX = 0;// (float)(region.rotate ? region.offset_y : region.offset_x);
+        float offsetY = 0;// (float)(region.rotate ? region.offset_x : region.offset_y);
         
-        D2D1_RECT_F destRect = D2D1::RectF(
-            0,0,
-            destWidth,destHeight
-        );
+        D2D1_RECT_F destRect;
+        destRect.left = offsetX;
+        destRect.top = offsetY;
+        destRect.right = destRect.left + (float)(region.rotate ? destHeight : destWidth);
+        destRect.bottom = destRect.top + (float)(region.rotate ? destWidth : destHeight);
+
         if (m_spineBitmap) {
             // 1. 슬롯 이미지 렌더링
             m_renderTarget->DrawBitmap(m_spineBitmap.Get(), destRect, 1.0f, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, srcRect);
+            
+			m_brush->SetColor(D2D1::ColorF(D2D1::ColorF::Red, 0.3f));
+			m_renderTarget->FillRectangle(destRect, m_brush.Get());
+			
             renderedSlots++;            
         } else {
             std::cout << "Spine bitmap is null!" << std::endl;
@@ -1090,11 +1095,11 @@ void SpineRenderer::RenderSpineSkeleton()
     {	
         std::string boneName = m_bones[i].name;
 
-		if (printBone.find(boneName) == printBone.end())
-            continue;
+		//if (printBone.find(boneName) == printBone.end())
+        //    continue;
         
         D2D1::Matrix3x2F boneMatrix = world[i];
-
+        D2D1::Matrix3x2F renderMatrix = D2D1::Matrix3x2F::Scale(1.0f, -1.0f);
 		D2D1::Matrix3x2F finalMatrix = renderMatrix * boneMatrix * m_UnityScreen;
 		m_renderTarget->SetTransform(finalMatrix);
 		
