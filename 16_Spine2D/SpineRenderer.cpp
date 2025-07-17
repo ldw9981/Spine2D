@@ -661,9 +661,30 @@ bool SpineRenderer::LoadSpineSkeleton(const std::string& jsonPath) {
                     std::string boneName = bonePair.key();
                     auto& boneAnim = bonePair.value();
                     BoneTimeline timeline;
+					if (boneAnim.contains("scale")) {
+						for (auto& kf : boneAnim["scale"]) {
+							KeyFrameFloat2 k;
+							// 정적 포즈 처리: time이 없으면 0.0f로 설정                          
+							if (kf.contains("time")) {
+								k.time = kf["time"].get<float>();
+							}
+							if (kf.contains("x")) {
+								k.x = kf["x"].get<float>();
+							}
+							if (kf.contains("y")) {
+								k.y = kf["y"].get<float>();
+							}
+							if (kf.contains("curve")) {
+								if (kf["curve"].is_array())
+									for (auto& c : kf["curve"]) k.curve.push_back(c.get<float>());
+							}
+							timeline.scale.push_back(k);
+						}
+					}
+
                     if (boneAnim.contains("rotate")) {
                         for (auto& kf : boneAnim["rotate"]) {
-                            KeyFrame k;
+                            KeyFrameFloat k;
                             // 정적 포즈 처리: time이 없으면 0.0f로 설정                          
                             if (kf.contains("time")) {
                                 k.time = kf["time"].get<float>();
@@ -678,6 +699,26 @@ bool SpineRenderer::LoadSpineSkeleton(const std::string& jsonPath) {
                             timeline.rotate.push_back(k);
                         }
                     }
+					if (boneAnim.contains("translate")) {
+						for (auto& kf : boneAnim["translate"]) {
+                            KeyFrameFloat2 k;
+							// 정적 포즈 처리: time이 없으면 0.0f로 설정                          
+							if (kf.contains("time")) {
+								k.time = kf["time"].get<float>();
+							}
+							if (kf.contains("x")) {
+								k.x = kf["x"].get<float>();
+							}		
+							if (kf.contains("y")) {
+								k.y = kf["y"].get<float>();
+							}
+							if (kf.contains("curve")) {
+								if (kf["curve"].is_array())
+									for (auto& c : kf["curve"]) k.curve.push_back(c.get<float>());
+							}
+							timeline.translate.push_back(k);
+						}
+					}
                     // (translate, scale 등도 필요시 추가)
                     anim.boneTimelines[boneName] = timeline;
                 }
@@ -846,7 +887,8 @@ bool SpineRenderer::LoadSpineBitmap(const std::string& imagePath) {
 }
 
 // --- 키프레임 보간 함수 ---
-float SpineRenderer::InterpolateKeyFrames(const std::vector<KeyFrame>& keyframes, float time) {
+float SpineRenderer::InterpolateKeyFrames(const std::vector<KeyFrameFloat>& keyframes, float time) 
+{
     if (keyframes.empty()) return 0.0f;
     
     // 정적 포즈 처리: 시간이 없는 키프레임이면 첫 번째 값 반환
@@ -860,14 +902,42 @@ float SpineRenderer::InterpolateKeyFrames(const std::vector<KeyFrame>& keyframes
     
     for (size_t i = 1; i < keyframes.size(); ++i) {
         if (time < keyframes[i].time) {
-            const KeyFrame& prev = keyframes[i-1];
-            const KeyFrame& next = keyframes[i];
+            const KeyFrameFloat& prev = keyframes[i-1];
+            const KeyFrameFloat& next = keyframes[i];
             float t = (time - prev.time) / (next.time - prev.time);
             // (베지어 곡선 등 curve 처리 생략, 선형 보간)
             return prev.value + (next.value - prev.value) * t;
         }
     }
     return keyframes.back().value;
+}
+
+std::pair<float,float> SpineRenderer::InterpolateKeyFrames(const std::vector<KeyFrameFloat2>& keyframes, float time)
+{
+	if (keyframes.empty()) return std::pair<float,float>(0.0f,0.0f);
+
+	// 정적 포즈 처리: 시간이 없는 키프레임이면 첫 번째 값 반환
+	if (keyframes.size() == 1 || keyframes.front().time == 0.0f && keyframes.size() == 1) {
+		return std::pair<float, float>(keyframes.front().x, keyframes.front().y);
+	}
+
+	// 애니메이션 키프레임 처리
+	if (time <= keyframes.front().time) return std::pair<float, float>(keyframes.front().x, keyframes.front().y);
+	if (time >= keyframes.back().time) return std::pair<float, float>(keyframes.back().x, keyframes.back().y);
+
+	for (size_t i = 1; i < keyframes.size(); ++i) {
+		if (time < keyframes[i].time) {
+			const KeyFrameFloat2& prev = keyframes[i - 1];
+			const KeyFrameFloat2& next = keyframes[i];
+			float t = (time - prev.time) / (next.time - prev.time);
+
+            std::pair<float, float> temp;
+            temp.first = prev.x + (next.x - prev.x) * t;
+            temp.second = prev.y + (next.y - prev.y) * t;
+            return temp;
+		}
+	}
+	return std::pair<float, float>(keyframes.back().x, keyframes.back().y);
 }
 
 // --- 슬롯별 이미지 렌더링 ---
@@ -898,38 +968,53 @@ void SpineRenderer::RenderSpineSkeleton()
     for (size_t i = 0; i < m_bones.size(); ++i) {
         const auto& bone = m_bones[i];
         float rot = bone.rotation;
-        float scaleX = bone.scaleX;
-        float scaleY = bone.scaleY;
-        float x = bone.x;
-        float y = bone.y;
+        std::pair<float, float> scale = { bone.scaleX,bone.scaleY } ;
+        std::pair<float, float> translate = { bone.x,bone.y};
         if (anim) {
             auto itT = anim->boneTimelines.find(bone.name);
             if (itT != anim->boneTimelines.end()) {
                 if (!itT->second.rotate.empty())
-                    rot = InterpolateKeyFrames(itT->second.rotate, m_currentAnimationTime);
-                if (!itT->second.scaleX.empty())
-                    scaleX = InterpolateKeyFrames(itT->second.scaleX, m_currentAnimationTime);
-                if (!itT->second.scaleY.empty())
-                    scaleY = InterpolateKeyFrames(itT->second.scaleY, m_currentAnimationTime);
-                if (!itT->second.translateX.empty())
-                    x = InterpolateKeyFrames(itT->second.translateX, m_currentAnimationTime);
-                if (!itT->second.translateY.empty())
-                    y = InterpolateKeyFrames(itT->second.translateY, m_currentAnimationTime);
+                {
+                    float addRot = InterpolateKeyFrames(itT->second.rotate, m_currentAnimationTime);
+                    rot += addRot;
+                }
+                   
+                if (!itT->second.scale.empty())
+                {
+                    std::pair<float, float> addScale = InterpolateKeyFrames(itT->second.scale, m_currentAnimationTime);
+					scale.first *= addScale.first;
+					scale.second *= addScale.second;
+                }
+                   
+                if (!itT->second.translate.empty())
+                {
+                    std::pair<float, float> addTranslate = InterpolateKeyFrames(itT->second.translate, m_currentAnimationTime);
+                    translate.first += addTranslate.first;
+					translate.second += addTranslate.second;
+                }
             }
         }
         D2D1::Matrix3x2F localMatrix = 
-            D2D1::Matrix3x2F::Scale(scaleX, scaleY) * 
-            D2D1::Matrix3x2F::Rotation(rot) * 
-            D2D1::Matrix3x2F::Translation(x, y);
+            D2D1::Matrix3x2F::Scale(scale.first, scale.second) *
+            D2D1::Matrix3x2F::Rotation(rot) *
+            D2D1::Matrix3x2F::Translation(translate.first, translate.second);
         local[i] = localMatrix;
     }
     
     // 본의 월드 트랜스폼 계산
     std::vector<D2D1::Matrix3x2F> world(m_bones.size());
-    for (size_t i = 0; i < m_bones.size(); ++i) {
-        D2D1::Matrix3x2F w;
-        ComputeBoneWorldMatrix(m_bones, (int)i, local, w);
-        world[i] = w;
+
+    D2D1::Matrix3x2F parentMatrix;
+    for (size_t i = 0; i < m_bones.size(); ++i) 
+    {
+		// 부모가 있다면 부모의 월드 트랜스폼을 곱함
+		if (m_bones[i].parentIndex >= 0) {
+			parentMatrix = world[m_bones[i].parentIndex];
+		}
+		else {
+			parentMatrix = D2D1::Matrix3x2F::Identity();
+		}
+        world[i] = local[i] * parentMatrix;
     }
     
     // 슬롯별로 이미지 렌더링
@@ -1024,6 +1109,9 @@ void SpineRenderer::RenderSpineSkeleton()
     std::unordered_set<std::string> printBone;
 	printBone.insert("root");
     printBone.insert("hip");
+    printBone.insert("front-thigh");
+    printBone.insert("rear-thigh");
+    printBone.insert("torso");
 
 	for (size_t i = 0; i < m_bones.size(); ++i) 
     {	
@@ -1059,6 +1147,8 @@ void SpineRenderer::RenderSpineSkeleton()
 	}
 
 }
+
+
 
 // --- 애니메이션 시간 업데이트 ---
 void SpineRenderer::UpdateSpineAnimation(float deltaTime) {

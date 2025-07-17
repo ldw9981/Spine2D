@@ -120,17 +120,22 @@ public:
         std::string name;
         std::map<std::string, std::map<std::string, SpineAttachment>> attachments;
     };
-    struct KeyFrame {
+	struct KeyFrameFloat2 {
+		float time = 0;
+		float x = 0;
+		float y = 0;
+		std::vector<float> curve;
+	};
+    struct KeyFrameFloat {
         float time = 0;
         float value = 0;
         std::vector<float> curve;
-    };
-    struct BoneTimeline {
-        std::vector<KeyFrame> rotate;
-        std::vector<KeyFrame> translateX;
-        std::vector<KeyFrame> translateY;
-        std::vector<KeyFrame> scaleX;
-        std::vector<KeyFrame> scaleY;
+    };	
+
+    struct BoneTimeline {       
+        std::vector<KeyFrameFloat2> translate;
+        std::vector<KeyFrameFloat> rotate;
+        std::vector<KeyFrameFloat2> scale;
     };
     struct Animation {
         std::string name;
@@ -216,7 +221,9 @@ public:
     bool LoadAnimationData(const std::string& jsonPath);
     
     // 키프레임 보간
-    float InterpolateKeyFrames(const std::vector<KeyFrame>& keyframes, float time);
+    float InterpolateKeyFrames(const std::vector<KeyFrameFloat>& keyframes, float time);
+    std::pair<float,float> InterpolateKeyFrames(const std::vector<KeyFrameFloat2>& keyframes, float time);
+   
     
     // 베지어 곡선 보간
     float BezierInterpolate(float t, float p0, float p1, float p2, float p3);
