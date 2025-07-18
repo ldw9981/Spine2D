@@ -377,13 +377,9 @@ void SpineRenderer::Render()
     );
     // 슬롯별로 렌더링
     const auto& drawOrder = m_skeleton->getDrawOrder();
-    size_t drawCount = 0;
     spine::String findSlot;// = "rear-foot";
     for (size_t i = 0; i < drawOrder.size(); ++i) 
-    {
-		if (drawCount != 0 && i >= drawCount)
-            break; // drawCount만큼만 렌더링
-
+    {	
         spine::Slot* slot = drawOrder[i];
         spine::Attachment* attachment = slot->getAttachment();
         if (!attachment) 
@@ -426,6 +422,7 @@ void SpineRenderer::Render()
                 D2D1::Matrix3x2F::Scale(regionAtt->getScaleX(), regionAtt->getScaleY()) *
                 D2D1::Matrix3x2F::Rotation(attachRot) *
                 D2D1::Matrix3x2F::Translation(attachX, attachY);
+
             D2D1_RECT_F destRect;
             destRect.left = -destW/2;
             destRect.top = -destH/2;
@@ -555,56 +552,6 @@ void SpineRenderer::SetPreviousAnimation() {
     std::cout << "Previous animation: " << newAnimation << " (Index: " << m_currentAnimationIndex << ")" << std::endl;
 }
 
-void SpineRenderer::RenderAnimationInfo() {
-    if (!m_renderTarget || !m_brush) return;
-    
-    // 배경 박스 그리기
-    D2D1_RECT_F bgRect = D2D1::RectF(10, 10, 350, 200);
-    m_brush->SetColor(D2D1::ColorF(D2D1::ColorF::Black, 0.7f));
-    m_renderTarget->FillRectangle(bgRect, m_brush.Get());
-    
-    // 테두리 그리기
-    m_brush->SetColor(D2D1::ColorF(D2D1::ColorF::White, 0.8f));
-    m_renderTarget->DrawRectangle(bgRect, m_brush.Get(), 2.0f);
-    
-    // 현재 애니메이션 정보 표시 (간단한 도형으로)
-    m_brush->SetColor(D2D1::ColorF(D2D1::ColorF::Yellow));
-    
-    // 현재 애니메이션 인덱스 표시 (색상으로 구분)
-    for (size_t i = 0; i < m_animationList.size(); ++i) {
-        D2D1_RECT_F animRect = D2D1::RectF(20 + i * 40, 30, 20 + i * 40 + 30, 60);
-        
-        if (i == m_currentAnimationIndex) {
-            // 현재 애니메이션은 밝은 색
-            m_brush->SetColor(D2D1::ColorF(D2D1::ColorF::Cyan));
-        } else {
-            // 다른 애니메이션은 어두운 색
-            m_brush->SetColor(D2D1::ColorF(D2D1::ColorF::Gray));
-        }
-        
-        m_renderTarget->FillRectangle(animRect, m_brush.Get());
-        
-        // 번호 표시 (간단한 점으로)
-        D2D1_ELLIPSE dot = D2D1::Ellipse(D2D1::Point2F(35 + i * 40, 45), 3.0f, 3.0f);
-        m_brush->SetColor(D2D1::ColorF(D2D1::ColorF::White));
-        m_renderTarget->FillEllipse(dot, m_brush.Get());
-    }
-    
-    // 렌더링 모드 표시
-    D2D1_RECT_F modeRect = D2D1::RectF(20, 80, 340, 110);
-    m_brush->SetColor(D2D1::ColorF(D2D1::ColorF::LightGreen));
-    m_renderTarget->FillRectangle(modeRect, m_brush.Get());
-    
-    // 애니메이션 시간 표시
-    D2D1_RECT_F timeRect = D2D1::RectF(20, 120, 340, 150);
-    m_brush->SetColor(D2D1::ColorF(D2D1::ColorF::Orange));
-    m_renderTarget->FillRectangle(timeRect, m_brush.Get());
-    
-    // 키보드 조작법 표시
-    D2D1_RECT_F keyRect = D2D1::RectF(20, 160, 340, 190);
-    m_brush->SetColor(D2D1::ColorF(D2D1::ColorF::LightBlue));
-    m_renderTarget->FillRectangle(keyRect, m_brush.Get());
-} 
 
 bool SpineRenderer::LoadSpine(const std::string& atlasPath, const std::string& jsonPath) 
 {   

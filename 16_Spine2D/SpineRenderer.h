@@ -47,9 +47,7 @@ public:
     float GetAnimationTime() const { return m_animationTime; }
     void SetNextAnimation();
     void SetPreviousAnimation();
-
-    // UI 렌더링
-    void RenderAnimationInfo();
+          
     void HandleKeyInput(int keyCode);
     void Clear(const D2D1_COLOR_F& color = { 0.1f, 0.1f, 0.1f, 1.0f });
     D2D1_SIZE_F GetRenderTargetSize() const;
