@@ -99,6 +99,8 @@ private:
     int m_clientWidth = 0;
     int m_clientHeight = 0;
     bool m_initialized = false;
+	D2D1_VECTOR_2F m_CharacterPosition = D2D1::Vector2F(0.0f, 0.0f);
+    D2D1_VECTOR_2F m_CameraPosition = D2D1::Vector2F(0.0f, 300.0f);
 
     // 내부 함수들(Direct2D/3D 초기화 등)
     bool InitializeD3D11();

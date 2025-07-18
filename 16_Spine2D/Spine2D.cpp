@@ -9,8 +9,8 @@ std::unique_ptr<SpineRenderer> g_spineRenderer;
 HWND g_hwnd = nullptr;
 bool g_running = true;
 
-int g_windowWidth = 1920;
-int g_windowHeight = 1080;
+int g_windowWidth = 1280;
+int g_windowHeight = 960;
 
 // 윈도우 프로시저
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {

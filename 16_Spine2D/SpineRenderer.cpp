@@ -85,7 +85,7 @@ void Direct2DTextureLoader::unload(void* texture) {
     // Direct2D 비트맵은 ComPtr로 관리하므로 별도 해제 불필요
 }
 
-// SpineRenderer 생성자/소멸자에서 spine-cpp 객체 관리
+
 SpineRenderer::SpineRenderer() : m_textureLoader(nullptr), m_atlas(nullptr), m_skeletonData(nullptr), m_skeleton(nullptr), m_stateData(nullptr), m_state(nullptr) {}
 SpineRenderer::~SpineRenderer() { Shutdown(); }
 
@@ -94,6 +94,7 @@ bool SpineRenderer::Initialize(HWND hwnd,int width,int height) {
     
 	m_UnityScreen = D2D1::Matrix3x2F::Scale(1.0f, -1.0f) *
 		D2D1::Matrix3x2F::Translation((float)width / 2, (float)height/2 );
+
 
     // 콘솔 인코딩 설정
     SetConsoleUTF8();
@@ -352,14 +353,18 @@ void SpineRenderer::Render()
     if (!m_skeleton || !m_atlas || !m_renderTarget) 
         return;
 
-    m_renderTarget->SetTransform(m_UnityScreen);
-	m_renderTarget->DrawLine(D2D1::Point2F(-m_clientWidth / 2, 0.0f),D2D1::Point2F(+m_clientWidth / 2, 0.0f),
+	D2D1::Matrix3x2F renderTransform = D2D1::Matrix3x2F::Scale(1.0f, -1.0f);
+	D2D1::Matrix3x2F cameraInv = D2D1::Matrix3x2F::Translation(m_CameraPosition.x, m_CameraPosition.y);
+	cameraInv.Invert();
+
+    m_renderTarget->SetTransform(cameraInv * m_UnityScreen);
+	m_renderTarget->DrawLine(D2D1::Point2F(-m_clientWidth ),D2D1::Point2F(+m_clientWidth ),
 		m_brush.Get(), 1.0f);
 	// 수직선
-	m_renderTarget->DrawLine(D2D1::Point2F(0.0f, -m_clientHeight / 2.0f),D2D1::Point2F(0.0f, m_clientHeight / 2.0f),
+	m_renderTarget->DrawLine(D2D1::Point2F(0.0f, -m_clientHeight ),D2D1::Point2F(0.0f, m_clientHeight ),
         m_brush.Get(), 1.0f);
+        
 
-    D2D1::Matrix3x2F renderTransform = D2D1::Matrix3x2F::Scale(1.0f, -1.0f);
 
     m_renderTarget->SetTransform(D2D1::Matrix3x2F::Identity());
     // 애니메이션 이름 표시
@@ -434,15 +439,18 @@ void SpineRenderer::Render()
                 D2D1::Matrix3x2F::Rotation(bone.getWorldRotationX()) *
                 D2D1::Matrix3x2F::Translation(bone.getWorldX(), bone.getWorldY());
             
-            D2D1::Matrix3x2F finalMatrix = renderTransform * attachmentMatrix * boneWorldMatrix * m_UnityScreen;
+            D2D1::Matrix3x2F finalMatrix = renderTransform * attachmentMatrix * boneWorldMatrix * cameraInv * m_UnityScreen;
             m_renderTarget->SetTransform(finalMatrix);
-            m_renderTarget->DrawBitmap(bitmap, destRect, 1.0f, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, srcRect);
+            
+            // 확인용 영역 그리기
             if(rotated)
-                m_brush->SetColor(D2D1::ColorF(D2D1::ColorF::Blue, 0.3f));
+                m_brush->SetColor(D2D1::ColorF(D2D1::ColorF::Blue, 0.1f));
             else
-                m_brush->SetColor(D2D1::ColorF(D2D1::ColorF::Green, 0.3f));
-           
+                m_brush->SetColor(D2D1::ColorF(D2D1::ColorF::Green, 0.1f));                       
             m_renderTarget->FillRectangle(destRect, m_brush.Get());
+            
+            // 이미지 그리기
+            m_renderTarget->DrawBitmap(bitmap, destRect, 1.0f, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, srcRect);
         }
     }
     // --- 본의 원점에 cross(십자) 라인 그리기 ---
@@ -459,7 +467,7 @@ void SpineRenderer::Render()
 				D2D1::Matrix3x2F::Translation(bone.getWorldX(), bone.getWorldY());
 
 
-			m_renderTarget->SetTransform(renderTransform * boneWorldMatrix * m_UnityScreen);
+			m_renderTarget->SetTransform(renderTransform * boneWorldMatrix * cameraInv  * m_UnityScreen);
 
             float x = 0;
             float y = 0;
@@ -489,10 +497,7 @@ void SpineRenderer::Render()
            
         }
     }
-
-
     m_renderTarget->SetTransform(D2D1::Matrix3x2F::Identity());
-
 
 }
 
