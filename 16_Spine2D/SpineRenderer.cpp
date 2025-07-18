@@ -373,16 +373,19 @@ void SpineRenderer::Render()
     // 슬롯별로 렌더링
     const auto& drawOrder = m_skeleton->getDrawOrder();
     size_t drawCount = 0;
+    spine::String findSlot;// = "rear-foot";
     for (size_t i = 0; i < drawOrder.size(); ++i) 
     {
 		if (drawCount != 0 && i >= drawCount)
             break; // drawCount만큼만 렌더링
 
-
         spine::Slot* slot = drawOrder[i];
         spine::Attachment* attachment = slot->getAttachment();
         if (!attachment) 
             continue;
+
+        if (!findSlot.isEmpty() && attachment->getName() != findSlot)
+			continue; // 특정 슬롯만 렌더링
         
         if (attachment->getRTTI().isExactly(spine::RegionAttachment::rtti)) {
             spine::RegionAttachment* regionAtt = static_cast<spine::RegionAttachment*>(attachment);
@@ -408,23 +411,21 @@ void SpineRenderer::Render()
             // 2. destRect + offset 적용
             float destW = rotated ? atlasRegion->originalHeight : atlasRegion->originalWidth;
             float destH = rotated ? atlasRegion->originalWidth : atlasRegion->originalHeight;
-            float offsetX = 0, offsetY = 0;
-            
-             offsetX = atlasRegion->offsetX;
-             offsetY = atlasRegion->offsetY;
-            
-            // Spine 공식 방식: attachX, attachY에 offset과 -width/2, -height/2 보정
-            float attachX, attachY;
-            
-            attachX = regionAtt->getX() + offsetX - destW / 2.0f;
-			attachY = regionAtt->getY() + offsetY - destH / 2.0f;
-            
+            float offsetX = rotated ? atlasRegion->offsetY : atlasRegion->offsetX;
+            float offsetY = rotated ? atlasRegion->offsetX : atlasRegion->offsetY;
+            float attachX = regionAtt->getX() + offsetX;
+            float attachY = regionAtt->getY() + offsetY;
             float attachRot = regionAtt->getRotation() + (rotated ? -90.0f : 0.0f);
+
             D2D1::Matrix3x2F attachmentMatrix =
                 D2D1::Matrix3x2F::Scale(regionAtt->getScaleX(), regionAtt->getScaleY()) *
                 D2D1::Matrix3x2F::Rotation(attachRot) *
                 D2D1::Matrix3x2F::Translation(attachX, attachY);
-            D2D1_RECT_F destRect = { 0, 0, destW, destH };
+            D2D1_RECT_F destRect;
+            destRect.left = -destW/2;
+            destRect.top = -destH/2;
+            destRect.right = destRect.left + destW;
+            destRect.bottom = destRect.top + destH;
 
             // 4. 본(Bone)의 월드 변환
             spine::Bone& bone = slot->getBone();
