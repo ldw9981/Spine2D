@@ -77,12 +77,13 @@ private:
     D2D1::Matrix3x2F m_UnityScreen;
 
     // Spine-cpp 객체
-    Direct2DTextureLoader* m_textureLoader = nullptr;
-    spine::Atlas* m_atlas = nullptr;
-    spine::SkeletonData* m_skeletonData = nullptr;
-    spine::Skeleton* m_skeleton = nullptr;
-    spine::AnimationStateData* m_stateData = nullptr;
-    spine::AnimationState* m_state = nullptr;
+    std::unique_ptr<Direct2DTextureLoader> m_textureLoader;
+
+    std::unique_ptr<spine::Atlas> m_atlas;
+    std::unique_ptr<spine::SkeletonData> m_skeletonData;
+    std::unique_ptr<spine::Skeleton> m_skeleton;
+    std::unique_ptr<spine::AnimationStateData> m_stateData;
+    std::unique_ptr<spine::AnimationState> m_state;
 
     // 애니메이션 목록 및 상태
     std::vector<std::string> m_animationList;
@@ -105,4 +106,7 @@ private:
     bool InitializeDWrite();
     void ReleaseResources();
     bool LoadSpine(const std::string& atlasPath, const std::string& jsonPath);
+
+    void ReleaseSpine();
+	void ReleaseDirect2D();
 }; 
