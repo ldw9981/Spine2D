@@ -1,6 +1,5 @@
 #include "Common.h"
 
-#include "Float2.h"
 #include "SpineRenderer.h"
 #include "json.hpp" // nlohmann::json 사용
 #include <wincodec.h>
@@ -78,8 +77,8 @@ void Direct2DTextureLoader::load(spine::AtlasPage& page, const spine::String& pa
     
     page.texture = bitmap.Get();
     m_bitmapMap[path.buffer()] = bitmap;
-    page.width = bitmap->GetSize().width;
-    page.height = bitmap->GetSize().height;
+    page.width = static_cast<int>(bitmap->GetSize().width);
+    page.height = static_cast<int>(bitmap->GetSize().height);
 }
 void Direct2DTextureLoader::unload(void* texture) {
     // Direct2D 비트맵은 ComPtr로 관리하므로 별도 해제 불필요
@@ -357,36 +356,25 @@ void SpineRenderer::Render()
 	D2D1::Matrix3x2F cameraInv = D2D1::Matrix3x2F::Translation(m_CameraPosition.x, m_CameraPosition.y);
 	cameraInv.Invert();
 
+    // 좌표계 축 그리기
     m_renderTarget->SetTransform(cameraInv * m_UnityScreen);
-	m_renderTarget->DrawLine(D2D1::Point2F(-m_clientWidth ),D2D1::Point2F(+m_clientWidth ),
-		m_brush.Get(), 1.0f);
-	// 수직선
-	m_renderTarget->DrawLine(D2D1::Point2F(0.0f, -m_clientHeight ),D2D1::Point2F(0.0f, m_clientHeight ),
-        m_brush.Get(), 1.0f);
+	m_renderTarget->DrawLine(D2D1::Point2F(-m_clientWidth ),D2D1::Point2F(+m_clientWidth ),m_brush.Get(), 1.0f);
+	m_renderTarget->DrawLine(D2D1::Point2F(0.0f, -m_clientHeight ),D2D1::Point2F(0.0f, m_clientHeight ),m_brush.Get(), 1.0f);
         
-
-
-    m_renderTarget->SetTransform(D2D1::Matrix3x2F::Identity());
     // 애니메이션 이름 표시
+    m_renderTarget->SetTransform(D2D1::Matrix3x2F::Identity());   
     std::wstring wAnimName(m_currentAnimation.begin(), m_currentAnimation.end());
-    m_renderTarget->DrawTextW(
-        wAnimName.c_str(), (UINT32)wAnimName.length(),
-        m_textFormat.Get(),
-        D2D1::RectF(0, 0, 100, 10),
-        m_brush.Get()
-    );
+    m_renderTarget->DrawTextW( wAnimName.c_str(), (UINT32)wAnimName.length(), 
+        m_textFormat.Get(),D2D1::RectF(0, 0, 100, 10), m_brush.Get());
+
     // 슬롯별로 렌더링
-    const auto& drawOrder = m_skeleton->getDrawOrder();
-    spine::String findSlot;// = "rear-foot";
+    const auto& drawOrder = m_skeleton->getDrawOrder();  
     for (size_t i = 0; i < drawOrder.size(); ++i) 
     {	
         spine::Slot* slot = drawOrder[i];
         spine::Attachment* attachment = slot->getAttachment();
         if (!attachment) 
             continue;
-
-        if (!findSlot.isEmpty() && attachment->getName() != findSlot)
-			continue; // 특정 슬롯만 렌더링
         
         if (attachment->getRTTI().isExactly(spine::RegionAttachment::rtti)) {
             spine::RegionAttachment* regionAtt = static_cast<spine::RegionAttachment*>(attachment);

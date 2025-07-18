@@ -136,13 +136,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Float2.cpp" />
     <ClCompile Include="Spine2D.cpp" />
     <ClCompile Include="SpineRenderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Common.h" />
-    <ClInclude Include="Float2.h" />
     <ClInclude Include="json.hpp" />
     <ClInclude Include="SpineRenderer.h" />
   </ItemGroup>
