@@ -352,6 +352,7 @@ void SpineRenderer::Render()
     if (!m_skeleton || !m_atlas || !m_renderTarget) 
         return;
 
+    D2D1::Matrix3x2F worldTransform = D2D1::Matrix3x2F::Translation(m_CharacterPosition.x,m_CharacterPosition.y);
 	D2D1::Matrix3x2F renderTransform = D2D1::Matrix3x2F::Scale(1.0f, -1.0f);
 	D2D1::Matrix3x2F cameraInv = D2D1::Matrix3x2F::Translation(m_CameraPosition.x, m_CameraPosition.y);
 	cameraInv.Invert();
@@ -376,68 +377,76 @@ void SpineRenderer::Render()
         if (!attachment) 
             continue;
         
-        if (attachment->getRTTI().isExactly(spine::RegionAttachment::rtti)) {
-            spine::RegionAttachment* regionAtt = static_cast<spine::RegionAttachment*>(attachment);
-            spine::TextureRegion* region = regionAtt->getRegion();
-            if (!region) continue;
-            spine::AtlasRegion* atlasRegion = static_cast<spine::AtlasRegion*>(region);
-            if (!atlasRegion) continue;
-            ID2D1Bitmap* bitmap = reinterpret_cast<ID2D1Bitmap*>(region->rendererObject);
-            if (!bitmap) continue;
-            // region.rotate(또는 degrees==90) 처리
-            assert(atlasRegion->degrees == 0 || atlasRegion->degrees == 90);
+        if (!attachment->getRTTI().isExactly(spine::RegionAttachment::rtti))
+			continue; // RegionAttachment만 처리
 
-            bool rotated = (atlasRegion->degrees == 90);
-            // 1. srcRect
-            float srcW = rotated ? atlasRegion->height : atlasRegion->width;
-            float srcH = rotated ? atlasRegion->width : atlasRegion->height;
-            D2D1_RECT_F srcRect = {  //OK
-                (float)atlasRegion->x,
-                (float)atlasRegion->y,
-                (float)(atlasRegion->x + srcW),
-                (float)(atlasRegion->y + srcH)
-            };
-            // 2. destRect + offset 적용
-            float destW = rotated ? atlasRegion->originalHeight : atlasRegion->originalWidth;
-            float destH = rotated ? atlasRegion->originalWidth : atlasRegion->originalHeight;
-            float offsetX = rotated ? atlasRegion->offsetY : atlasRegion->offsetX;
-            float offsetY = rotated ? atlasRegion->offsetX : atlasRegion->offsetY;
-            float attachX = regionAtt->getX() + offsetX;
-            float attachY = regionAtt->getY() + offsetY;
-            float attachRot = regionAtt->getRotation() + (rotated ? -90.0f : 0.0f);
+		spine::RegionAttachment* regionAtt = static_cast<spine::RegionAttachment*>(attachment);
+		spine::TextureRegion* region = regionAtt->getRegion();
+		if (!region) 
+            continue;
+		
+        spine::AtlasRegion* atlasRegion = static_cast<spine::AtlasRegion*>(region);
+		if (!atlasRegion) 
+            continue;
+		
+        ID2D1Bitmap* bitmap = reinterpret_cast<ID2D1Bitmap*>(region->rendererObject);
+		if (!bitmap) 
+            continue;
+		// region.rotate(또는 degrees==90) 처리
+		assert(atlasRegion->degrees == 0 || atlasRegion->degrees == 90);
 
-            D2D1::Matrix3x2F attachmentMatrix =
-                D2D1::Matrix3x2F::Scale(regionAtt->getScaleX(), regionAtt->getScaleY()) *
-                D2D1::Matrix3x2F::Rotation(attachRot) *
-                D2D1::Matrix3x2F::Translation(attachX, attachY);
+        // 텍스처 이미지 배치 최적화로 이미지가 회전된 경우는 예외처리가 필요하다.
+		bool rotated = (atlasRegion->degrees == 90);		
+		float srcW = rotated ? atlasRegion->height : atlasRegion->width;
+		float srcH = rotated ? atlasRegion->width : atlasRegion->height;
+		D2D1_RECT_F srcRect = {  //OK
+			(float)atlasRegion->x,
+			(float)atlasRegion->y,
+			(float)(atlasRegion->x + srcW),
+			(float)(atlasRegion->y + srcH)
+		};
+		// 2. destRect + offset 적용
+		float destW = rotated ? atlasRegion->originalHeight : atlasRegion->originalWidth;
+		float destH = rotated ? atlasRegion->originalWidth : atlasRegion->originalHeight;
+		float offsetX = rotated ? atlasRegion->offsetY : atlasRegion->offsetX;
+		float offsetY = rotated ? atlasRegion->offsetX : atlasRegion->offsetY;
+		float attachX = regionAtt->getX() + offsetX;
+		float attachY = regionAtt->getY() + offsetY;
+		float attachRot = regionAtt->getRotation() + (rotated ? -90.0f : 0.0f);
 
-            D2D1_RECT_F destRect;
-            destRect.left = -destW/2;
-            destRect.top = -destH/2;
-            destRect.right = destRect.left + destW;
-            destRect.bottom = destRect.top + destH;
+		D2D1::Matrix3x2F attachmentMatrix =
+			D2D1::Matrix3x2F::Scale(regionAtt->getScaleX(), regionAtt->getScaleY()) *
+			D2D1::Matrix3x2F::Rotation(attachRot) *
+			D2D1::Matrix3x2F::Translation(attachX, attachY);
 
-            // 4. 본(Bone)의 월드 변환
-            spine::Bone& bone = slot->getBone();
-            D2D1::Matrix3x2F boneWorldMatrix =
-                D2D1::Matrix3x2F::Scale(bone.getScaleX(), bone.getScaleY()) *
-                D2D1::Matrix3x2F::Rotation(bone.getWorldRotationX()) *
-                D2D1::Matrix3x2F::Translation(bone.getWorldX(), bone.getWorldY());
-            
-            D2D1::Matrix3x2F finalMatrix = renderTransform * attachmentMatrix * boneWorldMatrix * cameraInv * m_UnityScreen;
-            m_renderTarget->SetTransform(finalMatrix);
-            
-            // 확인용 영역 그리기
-            if(rotated)
-                m_brush->SetColor(D2D1::ColorF(D2D1::ColorF::Blue, 0.1f));
-            else
-                m_brush->SetColor(D2D1::ColorF(D2D1::ColorF::Green, 0.1f));                       
-            m_renderTarget->FillRectangle(destRect, m_brush.Get());
-            
-            // 이미지 그리기
-            m_renderTarget->DrawBitmap(bitmap, destRect, 1.0f, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, srcRect);
-        }
-    }
+		D2D1_RECT_F destRect;
+		destRect.left = -destW / 2;
+		destRect.top = -destH / 2;
+		destRect.right = destRect.left + destW;
+		destRect.bottom = destRect.top + destH;
+
+		// 4. 본(Bone)의 월드 변환
+		spine::Bone& bone = slot->getBone();
+		D2D1::Matrix3x2F boneWorldMatrix =
+			D2D1::Matrix3x2F::Scale(bone.getScaleX(), bone.getScaleY()) *
+			D2D1::Matrix3x2F::Rotation(bone.getWorldRotationX()) *
+			D2D1::Matrix3x2F::Translation(bone.getWorldX(), bone.getWorldY());
+
+		D2D1::Matrix3x2F finalMatrix = renderTransform * attachmentMatrix * boneWorldMatrix * worldTransform * cameraInv * m_UnityScreen;
+		m_renderTarget->SetTransform(finalMatrix);
+
+		// 확인용 영역 그리기
+		if (rotated)
+			m_brush->SetColor(D2D1::ColorF(D2D1::ColorF::Blue, 0.1f));
+		else
+			m_brush->SetColor(D2D1::ColorF(D2D1::ColorF::Green, 0.1f));
+		m_renderTarget->FillRectangle(destRect, m_brush.Get());
+
+		// 이미지 그리기
+		m_renderTarget->DrawBitmap(bitmap, destRect, 1.0f, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, srcRect);
+
+	}
+
     // --- 본의 원점에 cross(십자) 라인 그리기 ---
     if (m_skeleton) {
         auto& bones = m_skeleton->getBones();
@@ -452,7 +461,7 @@ void SpineRenderer::Render()
 				D2D1::Matrix3x2F::Translation(bone.getWorldX(), bone.getWorldY());
 
 
-			m_renderTarget->SetTransform(renderTransform * boneWorldMatrix * cameraInv  * m_UnityScreen);
+			m_renderTarget->SetTransform(renderTransform * boneWorldMatrix * worldTransform * cameraInv  * m_UnityScreen);
 
             float x = 0;
             float y = 0;
