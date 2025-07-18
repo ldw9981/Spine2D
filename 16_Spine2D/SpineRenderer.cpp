@@ -859,7 +859,7 @@ Float2 SpineRenderer::InterpolateKeyFrames(const std::vector<KeyFrameFloat2>& ke
 
 
 // --- 슬롯별 이미지 렌더링 ---
-void SpineRenderer::RenderSpineSkeleton() 
+void SpineRenderer::Render() 
 { 
     m_renderTarget->SetTransform(D2D1::Matrix3x2F::Identity());
 	std::wstring wAnimName(m_currentAnimation.begin(), m_currentAnimation.end());
@@ -983,9 +983,8 @@ void SpineRenderer::RenderSpineSkeleton()
         D2D1::Matrix3x2F renderMatrix = D2D1::Matrix3x2F::Scale(1.0f, -1.0f) * D2D1::Matrix3x2F::Rotation(rotate);
 
         // 이미지 변환 행렬 계산 (attachment 변환을 본 변환에 적용)
-        D2D1::Matrix3x2F attachmentMatrix =
-            D2D1::Matrix3x2F::Scale(att.scaleX,att.scaleY) * D2D1::Matrix3x2F::Rotation(att.rotation) *
-            D2D1::Matrix3x2F::Translation(att.x,att.y);
+        D2D1::Matrix3x2F attachmentMatrix = D2D1::Matrix3x2F::Scale(att.scaleX,att.scaleY) * 
+            D2D1::Matrix3x2F::Rotation(att.rotation) * D2D1::Matrix3x2F::Translation(att.x,att.y);
                     
         D2D1::Matrix3x2F finalMatrix = renderMatrix * attachmentMatrix * boneMatrix * m_UnityScreen;
         m_renderTarget->SetTransform(finalMatrix);
@@ -996,14 +995,14 @@ void SpineRenderer::RenderSpineSkeleton()
 		srcRect.top = (float)region.y;
 		srcRect.right = srcRect.left + (float)(region.rotate ? region.height : region.width);
         srcRect.bottom = srcRect.top + (float)(region.rotate ? region.width : region.height);
-           
+
         // offsets 정보를 사용해서 destRect 계산
         float destWidth = (region.orig_w > 0) ? region.orig_w : att.width;
         float destHeight = (region.orig_h > 0) ? region.orig_h : att.height;
         
         // attachment 위치와 offsets를 사용해서 이미지 위치 조정
-        float offsetX = 0;// (float)(region.rotate ? region.offset_y : region.offset_x);
-        float offsetY = 0;// (float)(region.rotate ? region.offset_x : region.offset_y);
+        float offsetX = (float)(region.rotate ? region.offset_y : region.offset_x);
+        float offsetY = (float)(region.rotate ? region.offset_x : region.offset_y);
         
         D2D1_RECT_F destRect;  
         destRect.left = offsetX;

@@ -71,9 +71,11 @@ public:
     // Spine2D 스켈레톤 데이터
     struct AtlasRegion {
         std::string name;
-        int x, y, width, height;
-        bool rotate;
-        int orig_w, orig_h, offset_x, offset_y;
+        int x, y;           // 아틀라스 내 위치 (좌상단)
+        int width, height;  // 트림된 실제 저장 크기
+        bool rotate;        // 이미지가 회전 저장되었는지 여부
+        int orig_w, orig_h; // 원본 이미지 크기
+        int offset_x, offset_y; // 트림 위치 (원본 이미지 안에서의 위치)
     };
     struct SpineBone {
         int index = -1; // 자신의 인덱스
@@ -93,9 +95,12 @@ public:
     };
     struct SpineAttachment {
         std::string name;
-        std::string type;
-        float x = 0, y = 0, rotation = 0, scaleX = 1, scaleY = 1, width = 0, height = 0;
-        std::string path;
+        std::string type;       
+        float x = 0, y = 0;     // 슬롯 기준 위치
+        float rotation = 0;     // 사용자 설정 회전
+        float scaleX = 1, scaleY = 1;
+        float width = 0, height = 0;
+        std::string path;       // atlas의 region 이름
     };
     struct SpineSkin {
         std::string name;
@@ -196,7 +201,7 @@ public:
     void UpdateSpineAnimation(float deltaTime);
     
     // Spine2D 스켈레톤 렌더링
-    void RenderSpineSkeleton();
+    void Render();
     
     // 키프레임 보간
     float InterpolateKeyFrames(const std::vector<KeyFrameFloat>& keyframes, float time);

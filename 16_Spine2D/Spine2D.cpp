@@ -147,7 +147,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         g_spineRenderer->BeginRender();
         g_spineRenderer->Clear(D2D1::ColorF(D2D1::ColorF::LightGray));
         
-        g_spineRenderer->RenderSpineSkeleton();
+        g_spineRenderer->Render();
         
         g_spineRenderer->EndRender();
         std::this_thread::sleep_for(std::chrono::milliseconds(16));
