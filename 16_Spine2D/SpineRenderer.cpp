@@ -19,6 +19,7 @@
 #include <spine/SkeletonClipping.h>
 #include <spine/Bone.h>
 #include <spine/Animation.h>
+#include <spine/BoneData.h>
 
 #pragma comment(lib, "d3d11.lib")
 
@@ -351,8 +352,16 @@ void SpineRenderer::Render()
     if (!m_skeleton || !m_atlas || !m_renderTarget) 
         return;
 
+    m_renderTarget->SetTransform(m_UnityScreen);
+	m_renderTarget->DrawLine(D2D1::Point2F(-m_clientWidth / 2, 0.0f),D2D1::Point2F(+m_clientWidth / 2, 0.0f),
+		m_brush.Get(), 1.0f);
+	// 수직선
+	m_renderTarget->DrawLine(D2D1::Point2F(0.0f, -m_clientHeight / 2.0f),D2D1::Point2F(0.0f, m_clientHeight / 2.0f),
+        m_brush.Get(), 1.0f);
+
     D2D1::Matrix3x2F renderTransform = D2D1::Matrix3x2F::Scale(1.0f, -1.0f);
 
+    m_renderTarget->SetTransform(D2D1::Matrix3x2F::Identity());
     // 애니메이션 이름 표시
     std::wstring wAnimName(m_currentAnimation.begin(), m_currentAnimation.end());
     m_renderTarget->DrawTextW(
@@ -363,7 +372,13 @@ void SpineRenderer::Render()
     );
     // 슬롯별로 렌더링
     const auto& drawOrder = m_skeleton->getDrawOrder();
-    for (size_t i = 0; i < drawOrder.size(); ++i) {
+    size_t drawCount = 0;
+    for (size_t i = 0; i < drawOrder.size(); ++i) 
+    {
+		if (drawCount != 0 && i >= drawCount)
+            break; // drawCount만큼만 렌더링
+
+
         spine::Slot* slot = drawOrder[i];
         spine::Attachment* attachment = slot->getAttachment();
         if (!attachment) 
@@ -378,11 +393,13 @@ void SpineRenderer::Render()
             ID2D1Bitmap* bitmap = reinterpret_cast<ID2D1Bitmap*>(region->rendererObject);
             if (!bitmap) continue;
             // region.rotate(또는 degrees==90) 처리
+            assert(atlasRegion->degrees == 0 || atlasRegion->degrees == 90);
+
             bool rotated = (atlasRegion->degrees == 90);
             // 1. srcRect
             float srcW = rotated ? atlasRegion->height : atlasRegion->width;
-            float srcH = rotated ? atlasRegion->width  : atlasRegion->height;
-            D2D1_RECT_F srcRect = {
+            float srcH = rotated ? atlasRegion->width : atlasRegion->height;
+            D2D1_RECT_F srcRect = {  //OK
                 (float)atlasRegion->x,
                 (float)atlasRegion->y,
                 (float)(atlasRegion->x + srcW),
@@ -390,24 +407,24 @@ void SpineRenderer::Render()
             };
             // 2. destRect + offset 적용
             float destW = rotated ? atlasRegion->originalHeight : atlasRegion->originalWidth;
-            float destH = rotated ? atlasRegion->originalWidth  : atlasRegion->originalHeight;
+            float destH = rotated ? atlasRegion->originalWidth : atlasRegion->originalHeight;
             float offsetX = 0, offsetY = 0;
-
-            if (rotated) {
-                offsetX = atlasRegion->offsetY;
-                offsetY = atlasRegion->originalWidth - atlasRegion->width - atlasRegion->offsetX;
-            } else {
-                offsetX = atlasRegion->offsetX;
-                offsetY = atlasRegion->offsetY;
-            }
-            D2D1_RECT_F destRect = { offsetX, offsetY, offsetX + destW, offsetY + destH };
-
-            // 3. attachmentMatrix (회전 추가)
+            
+             offsetX = atlasRegion->offsetX;
+             offsetY = atlasRegion->offsetY;
+            
+            // Spine 공식 방식: attachX, attachY에 offset과 -width/2, -height/2 보정
+            float attachX, attachY;
+            
+            attachX = regionAtt->getX() + offsetX - destW / 2.0f;
+			attachY = regionAtt->getY() + offsetY - destH / 2.0f;
+            
             float attachRot = regionAtt->getRotation() + (rotated ? -90.0f : 0.0f);
             D2D1::Matrix3x2F attachmentMatrix =
                 D2D1::Matrix3x2F::Scale(regionAtt->getScaleX(), regionAtt->getScaleY()) *
                 D2D1::Matrix3x2F::Rotation(attachRot) *
-                D2D1::Matrix3x2F::Translation(regionAtt->getX(), regionAtt->getY());
+                D2D1::Matrix3x2F::Translation(attachX, attachY);
+            D2D1_RECT_F destRect = { 0, 0, destW, destH };
 
             // 4. 본(Bone)의 월드 변환
             spine::Bone& bone = slot->getBone();
@@ -419,6 +436,12 @@ void SpineRenderer::Render()
             D2D1::Matrix3x2F finalMatrix = renderTransform * attachmentMatrix * boneWorldMatrix * m_UnityScreen;
             m_renderTarget->SetTransform(finalMatrix);
             m_renderTarget->DrawBitmap(bitmap, destRect, 1.0f, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, srcRect);
+            if(rotated)
+                m_brush->SetColor(D2D1::ColorF(D2D1::ColorF::Blue, 0.3f));
+            else
+                m_brush->SetColor(D2D1::ColorF(D2D1::ColorF::Green, 0.3f));
+           
+            m_renderTarget->FillRectangle(destRect, m_brush.Get());
         }
     }
     // --- 본의 원점에 cross(십자) 라인 그리기 ---
@@ -453,9 +476,23 @@ void SpineRenderer::Render()
                 D2D1::Point2F(x, y + crossLen),
                 m_brush.Get(), 2.0f
             );
+
+			// 본 이름 표시
+            std::wstring wBoneName(bone.getData().getName().buffer(), bone.getData().getName().buffer() + bone.getData().getName().length());
+            m_renderTarget->DrawTextW(
+                wBoneName.c_str(), (UINT32)wBoneName.length(),
+                m_textFormat.Get(),
+                D2D1::RectF(x + 10, y - 10, x + 100, y + 10),
+                m_brush.Get()
+			);
+           
         }
     }
+
+
     m_renderTarget->SetTransform(D2D1::Matrix3x2F::Identity());
+
+
 }
 
 
