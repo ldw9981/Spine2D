@@ -36,7 +36,7 @@ bool SpineRenderer::Initialize(HWND hwnd,int width,int height) {
     m_hwnd = hwnd;
     
 	m_UnityScreen = D2D1::Matrix3x2F::Scale(1.0f, -1.0f) *
-		D2D1::Matrix3x2F::Translation(width / 2, height/2 );
+		D2D1::Matrix3x2F::Translation((float)width / 2, (float)height/2 );
 
     // 콘솔 인코딩 설정
     SetConsoleUTF8();
@@ -284,59 +284,6 @@ void SpineRenderer::EndRender() {
     }
 }
 
-void SpineRenderer::RenderSpineAnimation(const std::string& atlasPath, const std::string& jsonPath, 
-                                        float x, float y, float scale, float rotation) {
-    if (!m_initialized) {
-        std::cout << "SpineRenderer not initialized!" << std::endl;
-        return;
-    }
-   
-    
-    // Atlas 로드
-    if (m_atlasRegions.empty()) {
-        std::cout << "Loading Atlas..." << std::endl;
-        if (!LoadAtlas(atlasPath)) {
-            std::cout << "Atlas loading failed!" << std::endl;
-        } else {
-            std::cout << "Atlas loading success! Region count: " << m_atlasRegions.size() << std::endl;
-        }
-    }
-    
-    // PNG 비트맵 로드
-    if (!m_spineBitmap) {
-        std::cout << "Loading Spine bitmap..." << std::endl;
-        std::string imagePath = atlasPath.substr(0, atlasPath.find_last_of('.')) + ".png";
-        std::cout << "Image path: " << imagePath << std::endl;
-        if (!LoadSpineBitmap(imagePath)) {
-            std::cout << "Spine bitmap loading failed!" << std::endl;
-        } else {
-            std::cout << "Spine bitmap loading success!" << std::endl;
-        }
-    }
-    
-    // 스켈레톤 데이터가 로드되어 있지 않으면 로드
-    if (m_bones.empty()) {
-        std::cout << "Loading skeleton..." << std::endl;
-        if (!LoadSpineSkeleton(jsonPath)) {
-            std::cout << "Skeleton loading failed!" << std::endl;
-        } else {
-            std::cout << "Skeleton loading success! Bone count: " << m_bones.size() << std::endl;
-        }
-    }
-    
-    // 변환 행렬 설정
-    D2D1::Matrix3x2F transform =
-        D2D1::Matrix3x2F::Scale(scale, scale) * 
-        D2D1::Matrix3x2F::Rotation(rotation) * 
-        D2D1::Matrix3x2F::Translation(x, y);
-    
-    m_renderTarget->SetTransform( transform * m_UnityScreen);    
-    
-    // 디버그 정보 표시
-    RenderDebugInfo(atlasPath, jsonPath, x, y);
-}
-
-
 void SpineRenderer::RenderDebugInfo(const std::string& atlasPath, const std::string& jsonPath, float x, float y) {
     // 디버그 정보를 화면에 표시
     m_brush->SetColor(D2D1::ColorF(D2D1::ColorF::White));
@@ -375,7 +322,7 @@ void SpineRenderer::SetAnimation(const std::string& animationName) {
     // 애니메이션 인덱스 업데이트
     for (size_t i = 0; i < m_animationList.size(); ++i) {
         if (m_animationList[i] == animationName) {
-            m_currentAnimationIndex = i;
+            m_currentAnimationIndex = static_cast<int>(i);
             break;
         }
     }
@@ -714,7 +661,7 @@ D2D1_SIZE_F SpineRenderer::GetRenderTargetSize() const {
     if (m_renderTarget) {
         return m_renderTarget->GetSize();
     }
-    return D2D1::SizeF(m_clientWidth,m_clientHeight); // 기본 크기
+    return D2D1::SizeF(static_cast<float>(m_clientWidth), static_cast<float>(m_clientHeight)); // 기본 크기
 }
 
 void SpineRenderer::Clear(const D2D1_COLOR_F& color) {
@@ -1058,7 +1005,7 @@ void SpineRenderer::RenderSpineSkeleton()
         float offsetX = 0;// (float)(region.rotate ? region.offset_y : region.offset_x);
         float offsetY = 0;// (float)(region.rotate ? region.offset_x : region.offset_y);
         
-        D2D1_RECT_F destRect;
+        D2D1_RECT_F destRect;  
         destRect.left = offsetX;
         destRect.top = offsetY;
         destRect.right = destRect.left + (float)(region.rotate ? destHeight : destWidth);

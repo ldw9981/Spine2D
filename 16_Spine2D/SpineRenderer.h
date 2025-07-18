@@ -23,11 +23,7 @@ public:
     // 렌더링 시작/종료
     void BeginRender();
     void EndRender();
-
-    // Spine 애니메이션 렌더링
-    void RenderSpineAnimation(const std::string& atlasPath, const std::string& jsonPath, 
-                             float x, float y, float scale = 1.0f, float rotation = 0.0f);
-
+      
     // 애니메이션 제어
     void SetAnimation(const std::string& animationName);
     void UpdateAnimation(float deltaTime);
@@ -202,16 +198,10 @@ public:
     // Spine2D 스켈레톤 렌더링
     void RenderSpineSkeleton();
     
-    // JSON 파일에서 애니메이션 데이터 로드
-    bool LoadAnimationData(const std::string& jsonPath);
-    
     // 키프레임 보간
     float InterpolateKeyFrames(const std::vector<KeyFrameFloat>& keyframes, float time);
     Float2 InterpolateKeyFrames(const std::vector<KeyFrameFloat2>& keyframes, float time);
-    
-    // 베지어 곡선 보간
-    float BezierInterpolate(float t, float p0, float p1, float p2, float p3);
-
+   
     bool LoadAtlas(const std::string& atlasPath);
     bool LoadSpineBitmap(const std::string& imagePath);
 }; 

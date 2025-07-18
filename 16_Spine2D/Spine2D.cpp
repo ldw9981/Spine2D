@@ -4,8 +4,8 @@
 #include "SpineAnimation.h"
 
 // 전역 변수
-SpineRenderer g_spineRenderer;
-SpineAnimation g_spineAnimation;
+std::unique_ptr<SpineRenderer> g_spineRenderer;
+std::unique_ptr<SpineAnimation> g_spineAnimation;
 HWND g_hwnd = nullptr;
 bool g_running = true;
 
@@ -29,7 +29,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             
         default:
             // SpineRenderer의 키보드 입력 처리 함수 호출
-            g_spineRenderer.HandleKeyInput(wParam);
+            g_spineRenderer->HandleKeyInput(wParam);
             return 0;
         }
         break;
@@ -85,6 +85,11 @@ HWND CreateGameWindow(const wchar_t* title, int width, int height) {
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     // 콘솔 출력 활성화 (디버깅용)
     
+    ::CoInitialize(nullptr);
+
+	g_spineRenderer = std::make_unique<SpineRenderer>();
+	g_spineAnimation = std::make_unique<SpineAnimation>();
+
     std::cout << "Spine2D 프로젝트 시작" << std::endl;
     
     // 윈도우 생성
@@ -96,24 +101,24 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     }
     
     // Spine 렌더러 초기화
-    if (!g_spineRenderer.Initialize(g_hwnd, g_windowWidth, g_windowHeight)) {
+    if (!g_spineRenderer->Initialize(g_hwnd, g_windowWidth, g_windowHeight)) {
         std::cout << "Spine 렌더러 초기화 실패" << std::endl;
         MessageBoxA(nullptr, "Spine 렌더러 초기화 실패", "Initialization Error", MB_OK | MB_ICONERROR);
         return -1;
     }
     
     // Spineboy 데이터 로드
-    if (!g_spineRenderer.LoadSpineSkeleton("../Resource/spineboy.json")) {
+    if (!g_spineRenderer->LoadSpineSkeleton("../Resource/spineboy.json")) {
         std::cout << "Spine 스켈레톤 로드 실패" << std::endl;
         MessageBoxA(nullptr, "Spine 스켈레톤 로드 실패", "Load Error", MB_OK | MB_ICONERROR);
         return -1;
     }
-    if (!g_spineRenderer.LoadAtlas("../Resource/spineboy.atlas")) {
+    if (!g_spineRenderer->LoadAtlas("../Resource/spineboy.atlas")) {
         std::cout << "Spine atlas 로드 실패" << std::endl;
         MessageBoxA(nullptr, "Spine atlas 로드 실패", "Load Error", MB_OK | MB_ICONERROR);
         return -1;
     }
-    if (!g_spineRenderer.LoadSpineBitmap("../Resource/spineboy.png")) {
+    if (!g_spineRenderer->LoadSpineBitmap("../Resource/spineboy.png")) {
         std::cout << "Spine 이미지 로드 실패" << std::endl;
         MessageBoxA(nullptr, "Spine 이미지 로드 실패", "Load Error", MB_OK | MB_ICONERROR);
         return -1;
@@ -122,8 +127,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     // 모든 파일 로드 성공
     //MessageBoxA(nullptr, "모든 Spine2D 파일 로드 성공!\n\n키보드 조작:\n0: 이미지(본박스포함)/박스스켈레톤 토글\n1: Aim\n2: Death\n3: Hit\n4: Idle\n5: Jump\n6: Run\n7: Shoot\n8: Walk\n←→: 이전/다음 애니메이션\nESC: 종료", "Load Success", MB_OK | MB_ICONINFORMATION);
     
-    g_spineRenderer.m_currentAnimation = "aim"; // 기본 애니메이션
-    g_spineRenderer.m_currentAnimationTime = 0.0f;
+    g_spineRenderer->m_currentAnimation = "aim"; // 기본 애니메이션
+    g_spineRenderer->m_currentAnimationTime = 0.0f;
 
     // 게임 루프
     auto lastTime = std::chrono::high_resolution_clock::now();
@@ -137,18 +142,21 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             DispatchMessage(&msg);
         }
         // 애니메이션 업데이트
-        g_spineRenderer.UpdateSpineAnimation(deltaTime);
+        g_spineRenderer->UpdateSpineAnimation(deltaTime);
         // 렌더링
-        g_spineRenderer.BeginRender();
-        g_spineRenderer.Clear(D2D1::ColorF(D2D1::ColorF::LightGray));
+        g_spineRenderer->BeginRender();
+        g_spineRenderer->Clear(D2D1::ColorF(D2D1::ColorF::LightGray));
         
-        g_spineRenderer.RenderSpineSkeleton();
+        g_spineRenderer->RenderSpineSkeleton();
         
-        g_spineRenderer.EndRender();
+        g_spineRenderer->EndRender();
         std::this_thread::sleep_for(std::chrono::milliseconds(16));
     }
-    g_spineRenderer.Shutdown();
+    g_spineRenderer->Shutdown();
     std::cout << "Spine2D 프로젝트 종료" << std::endl;
    
+    g_spineRenderer.reset();
+    g_spineAnimation.reset();
+    ::CoUninitialize();
     return 0;
 } 
