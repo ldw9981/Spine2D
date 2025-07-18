@@ -109,7 +109,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)spine-cpp/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)/spine-cpp/spine-cpp/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -126,7 +126,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)spine-cpp/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)/spine-cpp/spine-cpp/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -139,14 +139,12 @@
     <ClCompile Include="Float2.cpp" />
     <ClCompile Include="Spine2D.cpp" />
     <ClCompile Include="SpineRenderer.cpp" />
-    <ClCompile Include="SpineAnimation.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Common.h" />
     <ClInclude Include="Float2.h" />
     <ClInclude Include="json.hpp" />
     <ClInclude Include="SpineRenderer.h" />
-    <ClInclude Include="SpineAnimation.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="spine-data\spineboy.atlas" />
