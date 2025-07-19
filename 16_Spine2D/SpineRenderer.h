@@ -14,7 +14,7 @@
 #include <vector>
 #include <map>
 
-// Direct2Dìš© TextureLoader êµ¬í˜„
+// Direct2D¿ë TextureLoader ±¸Çö
 class Direct2DTextureLoader : public spine::TextureLoader {
 public:
     Direct2DTextureLoader(ID2D1RenderTarget* renderTarget);
@@ -31,15 +31,15 @@ public:
     SpineRenderer();
     ~SpineRenderer();
 
-    // ì´ˆê¸°í™”
+    // ÃÊ±âÈ­
     bool Initialize(HWND hwnd, int width, int height);
     void Shutdown();
 
-    // ë Œë”ë§ ì‹œì‘/ì¢…ë£Œ
+    // ·»´õ¸µ ½ÃÀÛ/Á¾·á
     void BeginRender();
     void EndRender();
 
-    // ì• ë‹ˆë©”ì´ì…˜ ì œì–´
+    // ¾Ö´Ï¸ŞÀÌ¼Ç Á¦¾î
     void SetAnimation(const std::string& animationName);
     void UpdateAnimation(float deltaTime);
     void SetAnimationTime(float time);
@@ -51,11 +51,11 @@ public:
     void Clear(const D2D1_COLOR_F& color = { 0.1f, 0.1f, 0.1f, 1.0f });
     D2D1_SIZE_F GetRenderTargetSize() const;
 
-    // Direct2D ë¦¬ì†ŒìŠ¤ ì ‘ê·¼ì
+    // Direct2D ¸®¼Ò½º Á¢±ÙÀÚ
     Microsoft::WRL::ComPtr<ID2D1RenderTarget> GetRenderTarget() const { return m_renderTarget; }
     Microsoft::WRL::ComPtr<ID2D1Factory> GetFactory() const { return m_factory; }
 
-    // ë Œë”ë§
+    // ·»´õ¸µ
     void Render();
 
 	bool LoadSpine(const std::string& atlasPath, const std::string& jsonPath);
@@ -63,24 +63,24 @@ public:
 	void ReleaseSpine();
 
 private:
-    // Direct2D ë¦¬ì†ŒìŠ¤ë“¤
+    // Direct2D ¸®¼Ò½ºµé
     Microsoft::WRL::ComPtr<ID2D1Factory> m_factory;
     Microsoft::WRL::ComPtr<ID2D1RenderTarget> m_renderTarget;
     Microsoft::WRL::ComPtr<ID2D1SolidColorBrush> m_brush;
     Microsoft::WRL::ComPtr<ID2D1Bitmap> m_spineBitmap;
 
-    // DirectWrite ë¦¬ì†ŒìŠ¤ë“¤
+    // DirectWrite ¸®¼Ò½ºµé
     Microsoft::WRL::ComPtr<IDWriteFactory> m_dwriteFactory;
     Microsoft::WRL::ComPtr<IDWriteTextFormat> m_textFormat;
 
-    // Direct3D 11 ë¦¬ì†ŒìŠ¤ë“¤
+    // Direct3D 11 ¸®¼Ò½ºµé
     Microsoft::WRL::ComPtr<ID3D11Device> m_device;
     Microsoft::WRL::ComPtr<ID3D11DeviceContext> m_deviceContext;
     Microsoft::WRL::ComPtr<IDXGISwapChain> m_swapChain;
 
     D2D1::Matrix3x2F m_UnityScreen;
 
-    // Spine-cpp ê°ì²´
+    // Spine-cpp °´Ã¼
     std::unique_ptr<Direct2DTextureLoader> m_textureLoader;
 
     std::unique_ptr<spine::Atlas> m_atlas;
@@ -89,14 +89,14 @@ private:
     std::unique_ptr<spine::AnimationStateData> m_stateData;
     std::unique_ptr<spine::AnimationState> m_state;
 
-    // ì• ë‹ˆë©”ì´ì…˜ ëª©ë¡ ë° ìƒíƒœ
+    // ¾Ö´Ï¸ŞÀÌ¼Ç ¸ñ·Ï ¹× »óÅÂ
     std::vector<std::string> m_animationList;
     int m_currentAnimationIndex = 0;
     float m_animationTime = 0.0f;
     std::string m_currentAnimation = "idle";
     float m_currentAnimationTime = 0.0f;
 
-    // ìœˆë„ìš° í•¸ë“¤ ë° í¬ê¸°
+    // À©µµ¿ì ÇÚµé ¹× Å©±â
     HWND m_hwnd;
     int m_clientWidth = 0;
     int m_clientHeight = 0;
@@ -104,7 +104,7 @@ private:
 	D2D1_VECTOR_2F m_CharacterPosition = D2D1::Vector2F(0.0f, 0.0f);
     D2D1_VECTOR_2F m_CameraPosition = D2D1::Vector2F(0.0f, 300.0f);
 
-    // ë‚´ë¶€ í•¨ìˆ˜ë“¤(Direct2D/3D ì´ˆê¸°í™” ë“±)
+    // ³»ºÎ ÇÔ¼öµé(Direct2D/3D ÃÊ±âÈ­ µî)
     bool InitializeD3D11();
     bool InitializeD2D1();
     bool InitializeDWrite();

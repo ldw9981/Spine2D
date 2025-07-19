@@ -348,9 +348,14 @@ void SpineRenderer::Render()
 
 	// 애니메이션 이름 표시
 	m_renderTarget->SetTransform(D2D1::Matrix3x2F::Identity());
+
+	std::wstring wMessage = L"Select Animation 1~9.   ,0: BasePose";
+	
+	m_renderTarget->DrawTextW(wMessage.c_str(), (UINT32)wMessage.length(),
+		m_textFormat.Get(), D2D1::RectF(0, 0, 300, 10), m_brush.Get());
 	std::wstring wAnimName(m_currentAnimation.begin(), m_currentAnimation.end());
 	m_renderTarget->DrawTextW(wAnimName.c_str(), (UINT32)wAnimName.length(),
-		m_textFormat.Get(), D2D1::RectF(0, 0, 100, 10), m_brush.Get());
+		m_textFormat.Get(), D2D1::RectF(0, 20, 100, 30), m_brush.Get());
 
 	// 슬롯별로 렌더링
 	const auto& drawOrder = m_skeleton->getDrawOrder();

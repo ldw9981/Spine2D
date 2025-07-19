@@ -1,14 +1,14 @@
 #include "Common.h"
 
 #include "SpineRenderer.h"
-#include <commdlg.h>  // ğŸ“Œ íŒŒì¼ ëŒ€í™”ìƒì API ì‚¬ìš©
+#include <commdlg.h>  //ÆÄÀÏ ´ëÈ­»óÀÚ API »ç¿ë
 #include <filesystem>
 
-// ì „ì—­ ë²„í¼(ë˜ëŠ” ì§€ì—­ ë³€ìˆ˜ ì‚¬ìš© ê°€ëŠ¥)
+// Àü¿ª ¹öÆÛ(¶Ç´Â Áö¿ª º¯¼ö »ç¿ë °¡´É)
 
-#define MENU_ID_LOAD 1 // ë©”ë‰´ ID ì •ì˜
+#define MENU_ID_LOAD 1 // ¸Ş´º ID Á¤ÀÇ
 
-// ì „ì—­ ë³€ìˆ˜
+// Àü¿ª º¯¼ö
 std::unique_ptr<SpineRenderer> g_spineRenderer;
 
 HWND g_hwnd = nullptr;
@@ -18,33 +18,32 @@ int g_windowWidth = 1280;
 int g_windowHeight = 960;
 
 
-// ìœˆë„ìš° í”„ë¡œì‹œì €
+// À©µµ¿ì ÇÁ·Î½ÃÀú
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
 	case WM_COMMAND:
 		switch (LOWORD(wParam)) {
-		case 1: { // ë©”ë‰´ ID = 1 ("Load")
-			OPENFILENAME ofn = {};
-			wchar_t filePath[MAX_PATH] = { 0 };
+		case 1: { // ¸Ş´º ID = 1 ("Load")
+			OPENFILENAMEA ofn = {};
+			char filePath[MAX_PATH] = { 0 };
 			ofn.lStructSize = sizeof(ofn);
 			ofn.hwndOwner = hwnd;
-			ofn.lpstrFilter = L"Atlas Files (*.atlas)\0*.atlas\0All Files (*.*)\0*.*\0";
+			ofn.lpstrFilter = "Atlas Files (*.atlas)\0*.atlas\0All Files (*.*)\0*.*\0";
 			ofn.lpstrFile = filePath;
 			ofn.nMaxFile = MAX_PATH;
 			ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
-			ofn.lpstrTitle = L"Open Atlas File";
+			ofn.lpstrTitle = "Open Atlas File";
 
-			if (GetOpenFileName(&ofn)) {
-				
-				std::wstring selectedFile(filePath);
-				std::string selectedFileStr(selectedFile.begin(), selectedFile.end());
+			if (GetOpenFileNameA(&ofn)) 
+            {			
+				std::string selectedFileStr(filePath);
 
                 g_spineRenderer->LoadSpine(
-                    std::filesystem::path(selectedFile).replace_extension(".atlas").string(),
-                    std::filesystem::path(selectedFile).replace_extension(".json").string()
+                    std::filesystem::path(selectedFileStr).replace_extension(".atlas").string(),
+                    std::filesystem::path(selectedFileStr).replace_extension(".json").string()
 				);
 
-				// TODO: ì„ íƒëœ íŒŒì¼ ì‚¬ìš© ë¡œì§ ì¶”ê°€
+				// TODO: ¼±ÅÃµÈ ÆÄÀÏ »ç¿ë ·ÎÁ÷ Ãß°¡
 			}
 			return 0;
 		}
@@ -64,7 +63,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             return 0;
             
         default:
-            // SpineRendererì˜ í‚¤ë³´ë“œ ì…ë ¥ ì²˜ë¦¬ í•¨ìˆ˜ í˜¸ì¶œ
+            // SpineRendererÀÇ Å°º¸µå ÀÔ·Â Ã³¸® ÇÔ¼ö È£Ãâ
             g_spineRenderer->HandleKeyInput(wParam);
             return 0;
         }
@@ -74,9 +73,9 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 
-// ìœˆë„ìš° ìƒì„±
+// À©µµ¿ì »ı¼º
 HWND CreateGameWindow(const wchar_t* title, int width, int height) {
-    // ìœˆë„ìš° í´ë˜ìŠ¤ ë“±ë¡
+    // À©µµ¿ì Å¬·¡½º µî·Ï
     WNDCLASS wc = {};
     wc.lpfnWndProc = WindowProc;
     wc.hInstance = GetModuleHandle(nullptr);
@@ -87,21 +86,21 @@ HWND CreateGameWindow(const wchar_t* title, int width, int height) {
     RegisterClass(&wc);
     
 
-	// ë©”ë‰´ ìƒì„±
+	// ¸Ş´º »ı¼º
 	HMENU hMenu = CreateMenu();
 	HMENU hFileMenu = CreatePopupMenu();
 	AppendMenu(hFileMenu, MF_STRING, MENU_ID_LOAD, L"&Load");  // ID = 1
 	AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hFileMenu, L"&File");
 
 
-    // ìœˆë„ìš° ìŠ¤íƒ€ì¼ ì„¤ì •
+    // À©µµ¿ì ½ºÅ¸ÀÏ ¼³Á¤
     DWORD style = WS_OVERLAPPEDWINDOW & ~(WS_MAXIMIZEBOX | WS_THICKFRAME);
     
-    // ìœˆë„ìš° í¬ê¸° ê³„ì‚°
+    // À©µµ¿ì Å©±â °è»ê
     RECT rect = { 0, 0, width, height };
     AdjustWindowRect(&rect, style, FALSE);
     
-    // ìœˆë„ìš° ìƒì„±
+    // À©µµ¿ì »ı¼º
     HWND hwnd = CreateWindowEx(
         0,
         L"Spine2DWindow",
@@ -125,34 +124,34 @@ HWND CreateGameWindow(const wchar_t* title, int width, int height) {
 }
 
 
-// ë©”ì¸ í•¨ìˆ˜
+// ¸ŞÀÎ ÇÔ¼ö
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-    // ì½˜ì†” ì¶œë ¥ í™œì„±í™” (ë””ë²„ê¹…ìš©)
+    // ÄÜ¼Ö Ãâ·Â È°¼ºÈ­ (µğ¹ö±ë¿ë)
     
     ::CoInitialize(nullptr);
 
 	g_spineRenderer = std::make_unique<SpineRenderer>();
 
-    std::cout << "Spine2D í”„ë¡œì íŠ¸ ì‹œì‘" << std::endl;
+    std::cout << "Spine2D ÇÁ·ÎÁ§Æ® ½ÃÀÛ" << std::endl;
     
-    // ìœˆë„ìš° ìƒì„±
+    // À©µµ¿ì »ı¼º
     g_hwnd = CreateGameWindow(L"Spine2D Demo", g_windowWidth, g_windowHeight);
     if (!g_hwnd) {
-        std::cout << "ìœˆë„ìš° ìƒì„± ì‹¤íŒ¨" << std::endl;
-        MessageBoxA(nullptr, "ìœˆë„ìš° ìƒì„± ì‹¤íŒ¨", "Initialization Error", MB_OK | MB_ICONERROR);
+        std::cout << "À©µµ¿ì »ı¼º ½ÇÆĞ" << std::endl;
+        MessageBoxA(nullptr, "À©µµ¿ì »ı¼º ½ÇÆĞ", "Initialization Error", MB_OK | MB_ICONERROR);
         return -1;
     }
     
-    // Spine ë Œë”ëŸ¬ ì´ˆê¸°í™”
+    // Spine ·»´õ·¯ ÃÊ±âÈ­
     if (!g_spineRenderer->Initialize(g_hwnd, g_windowWidth, g_windowHeight)) {
-        std::cout << "Spine ë Œë”ëŸ¬ ì´ˆê¸°í™” ì‹¤íŒ¨" << std::endl;
-        MessageBoxA(nullptr, "Spine ë Œë”ëŸ¬ ì´ˆê¸°í™” ì‹¤íŒ¨", "Initialization Error", MB_OK | MB_ICONERROR);
+        std::cout << "Spine ·»´õ·¯ ÃÊ±âÈ­ ½ÇÆĞ" << std::endl;
+        MessageBoxA(nullptr, "Spine ·»´õ·¯ ÃÊ±âÈ­ ½ÇÆĞ", "Initialization Error", MB_OK | MB_ICONERROR);
         return -1;
     }
-    // spine-cpp ê¸°ë°˜ì—ì„œëŠ” ë³„ë„ ë°ì´í„° ë¡œë“œ í•¨ìˆ˜ê°€ í•„ìš” ì—†ìŒ(Initializeì—ì„œ ëª¨ë‘ ì²˜ë¦¬)
-    // ê¸°ë³¸ ì• ë‹ˆë©”ì´ì…˜ ì„¤ì •
+    // spine-cpp ±â¹İ¿¡¼­´Â º°µµ µ¥ÀÌÅÍ ·Îµå ÇÔ¼ö°¡ ÇÊ¿ä ¾øÀ½(Initialize¿¡¼­ ¸ğµÎ Ã³¸®)
+    // ±âº» ¾Ö´Ï¸ŞÀÌ¼Ç ¼³Á¤
   
-    // ê²Œì„ ë£¨í”„
+    // °ÔÀÓ ·çÇÁ
     auto lastTime = std::chrono::high_resolution_clock::now();
     while (g_running) {
         auto currentTime = std::chrono::high_resolution_clock::now();
@@ -163,9 +162,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
-        // ì• ë‹ˆë©”ì´ì…˜ ì—…ë°ì´íŠ¸
+        // ¾Ö´Ï¸ŞÀÌ¼Ç ¾÷µ¥ÀÌÆ®
         g_spineRenderer->UpdateAnimation(deltaTime);
-        // ë Œë”ë§
+        // ·»´õ¸µ
         g_spineRenderer->BeginRender();
         g_spineRenderer->Clear(D2D1::ColorF(D2D1::ColorF::LightGray));
         g_spineRenderer->Render();
@@ -173,7 +172,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         std::this_thread::sleep_for(std::chrono::milliseconds(16));
     }
     g_spineRenderer->Shutdown();
-    std::cout << "Spine2D í”„ë¡œì íŠ¸ ì¢…ë£Œ" << std::endl;
+    std::cout << "Spine2D ÇÁ·ÎÁ§Æ® Á¾·á" << std::endl;
     g_spineRenderer.reset();
 
     ::CoUninitialize();
