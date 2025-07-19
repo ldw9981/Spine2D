@@ -1,7 +1,12 @@
 #include "Common.h"
 
 #include "SpineRenderer.h"
+#include <commdlg.h>  // 📌 파일 대화상자 API 사용
+#include <filesystem>
 
+// 전역 버퍼(또는 지역 변수 사용 가능)
+
+#define MENU_ID_LOAD 1 // 메뉴 ID 정의
 
 // 전역 변수
 std::unique_ptr<SpineRenderer> g_spineRenderer;
@@ -12,9 +17,40 @@ bool g_running = true;
 int g_windowWidth = 1280;
 int g_windowHeight = 960;
 
+
 // 윈도우 프로시저
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
+	case WM_COMMAND:
+		switch (LOWORD(wParam)) {
+		case 1: { // 메뉴 ID = 1 ("Load")
+			OPENFILENAME ofn = {};
+			wchar_t filePath[MAX_PATH] = { 0 };
+			ofn.lStructSize = sizeof(ofn);
+			ofn.hwndOwner = hwnd;
+			ofn.lpstrFilter = L"Atlas Files (*.atlas)\0*.atlas\0All Files (*.*)\0*.*\0";
+			ofn.lpstrFile = filePath;
+			ofn.nMaxFile = MAX_PATH;
+			ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+			ofn.lpstrTitle = L"Open Atlas File";
+
+			if (GetOpenFileName(&ofn)) {
+				
+				std::wstring selectedFile(filePath);
+				std::string selectedFileStr(selectedFile.begin(), selectedFile.end());
+
+                g_spineRenderer->LoadSpine(
+                    std::filesystem::path(selectedFile).replace_extension(".atlas").string(),
+                    std::filesystem::path(selectedFile).replace_extension(".json").string()
+				);
+
+				// TODO: 선택된 파일 사용 로직 추가
+			}
+			return 0;
+		}
+		}
+		break;
+
     case WM_DESTROY:
         g_running = false;
         PostQuitMessage(0);
@@ -50,6 +86,14 @@ HWND CreateGameWindow(const wchar_t* title, int width, int height) {
     
     RegisterClass(&wc);
     
+
+	// 메뉴 생성
+	HMENU hMenu = CreateMenu();
+	HMENU hFileMenu = CreatePopupMenu();
+	AppendMenu(hFileMenu, MF_STRING, MENU_ID_LOAD, L"&Load");  // ID = 1
+	AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hFileMenu, L"&File");
+
+
     // 윈도우 스타일 설정
     DWORD style = WS_OVERLAPPEDWINDOW & ~(WS_MAXIMIZEBOX | WS_THICKFRAME);
     
@@ -67,7 +111,7 @@ HWND CreateGameWindow(const wchar_t* title, int width, int height) {
         rect.right - rect.left,
         rect.bottom - rect.top,
         nullptr,
-        nullptr,
+        hMenu,
         GetModuleHandle(nullptr),
         nullptr
     );

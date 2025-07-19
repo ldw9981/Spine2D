@@ -31,21 +31,13 @@
 #pragma comment(lib,"dwrite.lib")
 
 
-// 콘솔 인코딩을 UTF-8로 설정
-void SetConsoleUTF8() {
-	SetConsoleOutputCP(CP_UTF8);
-	SetConsoleCP(CP_UTF8);
-}
-
-
-
-
 // Direct2DTextureLoader 구현
 Direct2DTextureLoader::Direct2DTextureLoader(ID2D1RenderTarget* renderTarget)
 	: m_renderTarget(renderTarget) {
 }
 Direct2DTextureLoader::~Direct2DTextureLoader() {}
-void Direct2DTextureLoader::load(spine::AtlasPage& page, const spine::String& path) {
+void Direct2DTextureLoader::load(spine::AtlasPage& page, const spine::String& path) 
+{
 	std::wstring wPath(path.buffer(), path.buffer() + path.length());
 	Microsoft::WRL::ComPtr<IWICImagingFactory> wicFactory;
 	HRESULT hr = CoCreateInstance(
@@ -96,10 +88,6 @@ bool SpineRenderer::Initialize(HWND hwnd, int width, int height) {
 
 	m_UnityScreen = D2D1::Matrix3x2F::Scale(1.0f, -1.0f) *
 		D2D1::Matrix3x2F::Translation((float)width / 2, (float)height / 2);
-
-
-	// 콘솔 인코딩 설정
-	SetConsoleUTF8();
 
 	m_clientWidth = width;
 	m_clientHeight = height;
@@ -548,7 +536,8 @@ void SpineRenderer::SetPreviousAnimation() {
 
 bool SpineRenderer::LoadSpine(const std::string& atlasPath, const std::string& jsonPath)
 {
-	m_atlas.reset(new spine::Atlas(atlasPath.c_str(), m_textureLoader.get()));
+	m_atlas.reset();
+	m_atlas = std::make_unique<spine::Atlas>(atlasPath.c_str(), m_textureLoader.get());
 	spine::SkeletonJson json(m_atlas.get());
 
 	m_skeletonData.reset(json.readSkeletonDataFile(jsonPath.c_str())); // 내부 new

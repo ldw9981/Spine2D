@@ -58,6 +58,10 @@ public:
     // 렌더링
     void Render();
 
+	bool LoadSpine(const std::string& atlasPath, const std::string& jsonPath);
+
+	void ReleaseSpine();
+
 private:
     // Direct2D 리소스들
     Microsoft::WRL::ComPtr<ID2D1Factory> m_factory;
@@ -105,8 +109,6 @@ private:
     bool InitializeD2D1();
     bool InitializeDWrite();
     void ReleaseResources();
-    bool LoadSpine(const std::string& atlasPath, const std::string& jsonPath);
 
-    void ReleaseSpine();
 	void ReleaseDirect2D();
 }; 

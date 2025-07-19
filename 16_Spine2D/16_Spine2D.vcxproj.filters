@@ -36,15 +36,4 @@
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
-  <ItemGroup>
-    <None Include="spine-data\spineboy.atlas">
-      <Filter>Spine Data</Filter>
-    </None>
-    <None Include="spine-data\spineboy.json">
-      <Filter>Spine Data</Filter>
-    </None>
-    <None Include="spine-data\spineboy.png">
-      <Filter>Spine Data</Filter>
-    </None>
-  </ItemGroup>
 </Project>
