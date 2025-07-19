@@ -336,8 +336,11 @@ void SpineRenderer::Render()
 	if (!m_skeleton || !m_atlas || !m_renderTarget)
 		return;
 
+	// 캐릭터의 월드 위치
 	D2D1::Matrix3x2F worldTransform = D2D1::Matrix3x2F::Translation(m_CharacterPosition.x, m_CharacterPosition.y);
+	// 유니티 좌표계 변환을 위해 사전 Y축 반전
 	D2D1::Matrix3x2F renderTransform = D2D1::Matrix3x2F::Scale(1.0f, -1.0f);
+	// 카메라 기준 좌표계 변환을 위해 역행렬 계산
 	D2D1::Matrix3x2F cameraInv = D2D1::Matrix3x2F::Translation(m_CameraPosition.x, m_CameraPosition.y);
 	cameraInv.Invert();
 
@@ -348,9 +351,7 @@ void SpineRenderer::Render()
 
 	// 애니메이션 이름 표시
 	m_renderTarget->SetTransform(D2D1::Matrix3x2F::Identity());
-
-	std::wstring wMessage = L"Select Animation 1~9.   ,0: BasePose";
-	
+	std::wstring wMessage = L"Select Animation 1~9.   ,0: BasePose";	
 	m_renderTarget->DrawTextW(wMessage.c_str(), (UINT32)wMessage.length(),
 		m_textFormat.Get(), D2D1::RectF(0, 0, 300, 10), m_brush.Get());
 	std::wstring wAnimName(m_currentAnimation.begin(), m_currentAnimation.end());
@@ -381,19 +382,20 @@ void SpineRenderer::Render()
 		ID2D1Bitmap* bitmap = reinterpret_cast<ID2D1Bitmap*>(region->rendererObject);
 		if (!bitmap)
 			continue;
-		// region.rotate(또는 degrees==90) 처리
+
+		// region.rotate 확인
 		assert(atlasRegion->degrees == 0 || atlasRegion->degrees == 90);
 
 		// 텍스처 이미지 배치 최적화로 이미지가 회전된 경우는 예외처리가 필요하다.
 		bool rotated = (atlasRegion->degrees == 90);
 		float srcW = rotated ? atlasRegion->height : atlasRegion->width;
 		float srcH = rotated ? atlasRegion->width : atlasRegion->height;
-		D2D1_RECT_F srcRect = {  //OK
-			(float)atlasRegion->x,
-			(float)atlasRegion->y,
-			(float)(atlasRegion->x + srcW),
-			(float)(atlasRegion->y + srcH)
-		};
+		D2D1_RECT_F srcRect;
+		srcRect.left = (float)atlasRegion->x;
+		srcRect.top = (float)atlasRegion->y;
+		srcRect.right = srcRect.left + srcW;
+		srcRect.bottom = srcRect.top + srcH;
+	
 		// 2. destRect + offset 적용
 		float destW = rotated ? atlasRegion->originalHeight : atlasRegion->originalWidth;
 		float destH = rotated ? atlasRegion->originalWidth : atlasRegion->originalHeight;
@@ -436,58 +438,28 @@ void SpineRenderer::Render()
 
 	}
 
-	// --- 본의 원점에 cross(십자) 라인 그리기 ---
-	if (m_skeleton) {
+	// 본의 원점에 + 라인과 이름 표시
+	if (m_skeleton) 
+	{
 		auto& bones = m_skeleton->getBones();
 		m_brush->SetColor(D2D1::ColorF(D2D1::ColorF::Red, 1.0f));
 		for (size_t i = 0; i < bones.size(); ++i) {
 			spine::Bone& bone = *bones[i];
-
-
 			D2D1::Matrix3x2F boneWorldMatrix =
 				D2D1::Matrix3x2F::Scale(bone.getScaleX(), bone.getScaleY()) *
 				D2D1::Matrix3x2F::Rotation(bone.getWorldRotationX()) *
 				D2D1::Matrix3x2F::Translation(bone.getWorldX(), bone.getWorldY());
 
-
 			m_renderTarget->SetTransform(renderTransform * boneWorldMatrix * worldTransform * cameraInv * m_UnityScreen);
-
-			float x = 0;
-			float y = 0;
-			// 십자선 길이
-			float crossLen = 8.0f;
-			// 수평선
-			m_renderTarget->DrawLine(
-				D2D1::Point2F(x - crossLen, y),
-				D2D1::Point2F(x + crossLen, y),
-				m_brush.Get(), 2.0f
-			);
-			// 수직선
-			m_renderTarget->DrawLine(
-				D2D1::Point2F(x, y - crossLen),
-				D2D1::Point2F(x, y + crossLen),
-				m_brush.Get(), 2.0f
-			);
-
-			// 본 이름 표시
+			float x = 0,y=0,crossLen = 8.0f;
+			m_renderTarget->DrawLine(D2D1::Point2F(x - crossLen, y),D2D1::Point2F(x + crossLen, y),m_brush.Get(), 2.0f);
+			m_renderTarget->DrawLine(D2D1::Point2F(x, y - crossLen),D2D1::Point2F(x, y + crossLen),m_brush.Get(), 2.0f);
 			std::wstring wBoneName(bone.getData().getName().buffer(), bone.getData().getName().buffer() + bone.getData().getName().length());
-			m_renderTarget->DrawTextW(
-				wBoneName.c_str(), (UINT32)wBoneName.length(),
-				m_textFormat.Get(),
-				D2D1::RectF(x + 10, y - 10, x + 100, y + 10),
-				m_brush.Get()
-			);
-
+			m_renderTarget->DrawTextW(wBoneName.c_str(), (UINT32)wBoneName.length(),
+				m_textFormat.Get(),D2D1::RectF(x + 10, y - 10, x + 100, y + 10),m_brush.Get());
 		}
 	}
-	m_renderTarget->SetTransform(D2D1::Matrix3x2F::Identity());
-
 }
-
-
-
-// --- 애니메이션 시간 업데이트 ---
-// UpdateSpineAnimation 함수와 m_animations 등 spine-cpp 이전 구조체/멤버 관련 코드 완전 삭제
 
 // --- 키보드 입력 처리 ---
 void SpineRenderer::HandleKeyInput(int keyCode) {
