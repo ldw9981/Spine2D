@@ -4,8 +4,6 @@
 #include <commdlg.h>  //파일 대화상자 API 사용
 #include <filesystem>
 
-// 전역 버퍼(또는 지역 변수 사용 가능)
-
 #define MENU_ID_LOAD 1 // 메뉴 ID 정의
 
 // 전역 변수
